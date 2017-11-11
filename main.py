@@ -5,6 +5,7 @@ from PIL import ImageTk
 import random
 import math
 import time
+from agent import Agent
 
 
 # pip install pillow
@@ -33,51 +34,6 @@ speed = 20  # ticks/second
 speed_before_pause = None
 
 
-class Agent:
-    position = []
-    direction = None
-    health = None
-    birth = None
-
-    def __init__(self, position, direction):
-        print("NewAgent")
-        self.position = position
-        self.direction = direction
-        self.health = configuration["Agent_Health"]
-        self.birth = tick_count
-
-    def tick(self):
-        # Movement
-        angle = self.direction * 2 * math.pi
-
-        self.position[0] += math.sin(angle) * configuration["Agent_MaxSpeed"]
-        self.position[1] += math.cos(angle) * configuration["Agent_MaxSpeed"]
-
-        self.position = wrap_position(self.position)
-
-        # NaturalDecay
-        self.health -= configuration["Agent_NaturalDecay"]
-
-    def eat(self):
-        self.health += configuration["Food_Value"]
-
-    def die(self):
-        agents.remove(self)
-
-    def get_distance(self, position):
-        distance_x = self.position[0] - position[0]
-        distance_y = self.position[1] - position[1]
-        distance = math.sqrt(math.pow(distance_x, 2) + math.pow(distance_y, 2))
-        return distance
-
-    def get_information_string(self):
-        string = "Position: [" + str(round(self.position[0], 2)) + ", " + str(round(self.position[1], 2)) + "]\n"
-        string += "Health: " + str(round(self.health, 2)) + "\n"
-        string += "Age: " + str(tick_count - self.birth) + "\n"
-
-        return string
-
-
 def tick():
     global tick_count
 
@@ -86,7 +42,7 @@ def tick():
     if speed != 0:
         tick_count += 1
 
-        fill_to_mim_population()
+        fill_to_min_population()
 
         for agent in agents:
             agent.tick()
@@ -132,10 +88,11 @@ def add_food():
 
 def add_agent():
     global agents
+    global tick_count
 
     position = [random.uniform(0, configuration["Area"]), random.uniform(0, configuration["Area"])]
     direction = random.uniform(0, 1)
-    agent = Agent(position, direction)
+    agent = Agent(position, direction, tick_count, configuration)
     print(direction)
 
     agents.append(agent)
