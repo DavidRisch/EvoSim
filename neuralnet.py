@@ -10,7 +10,7 @@ class NeuralNet:
     biases = [ ]
 
 
-    def __init__(self, nInNodes, nOutNodes, nHiddenLayerNodes):
+    def __init__(self, nInNodes, nHiddenLayerNodes, nOutNodes):
         # input layer (first element in 'layers')
         self.layers = [ [ 0.0 for i in range(nInNodes) ] ]
         self.nLayerNodes.append(nInNodes)
@@ -40,7 +40,7 @@ class NeuralNet:
                 for k in range(self.nLayerNodes[i-1]):
                     node += self.layers[i-1][k] * self.weights[i-1][j][k]
 
-                if abs(node) > 1e-2:
+                if abs(node) > 1e-2: # switch calculation for sigmoid to avoid very large exp-function values
                     self.layers[i][j] = 1 / (1 + exp( -node ))
                 else:
                     self.layers[i][j] = exp(node) / (1 + exp(node))
