@@ -62,11 +62,11 @@ def reset():
     print("########Reset########")
     global agents
     agents = []
-    fill_to_mim_population()
+    fill_to_min_population()
     draw_frame()
 
 
-def fill_to_mim_population():
+def fill_to_min_population():
     while len(agents) < configuration["Agent_MinPopulation"]:
         add_agent()
 
