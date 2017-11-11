@@ -24,7 +24,7 @@ class NeuralNet:
         self.nLayers = len(self.nLayerNodes)
 
         # weights [layer - 1] [node in hidden layer] [node in prev layer]
-        self.weights = [ [ [ 0.5
+        self.weights = [ [ [ 0.0
             for i in range(self.nLayerNodes[k-1]) ]
             for j in range(self.nLayerNodes[k]) ]
             for k in range(1, self.nLayers) ]
@@ -39,9 +39,23 @@ class NeuralNet:
                 node = self.biases[i-1][j]
                 for k in range(self.nLayerNodes[i-1]):
                     node += self.layers[i-1][k] * self.weights[i-1][j][k]
-                self.layers[i][j] = 1 / (1 + exp( -node ))
+
+                if abs(node) > 1e-2:
+                    self.layers[i][j] = 1 / (1 + exp( -node ))
+                else:
+                    self.layers[i][j] = exp(node) / (1 + exp(node))
 
         return self.layers[-1]
+
+
+    def randomize_weights(self, wmin, wmax, seed=None):
+        if seed != None
+            random.seed(seed)
+
+        for i in range(self.nLayers - 1):
+            for j in range(self.nLayerNodes[i]):
+                for k in range(self.nLayerNodes[i-1]:
+                        self.weights[i][j][k] = wmin + (wmax-wmin) * random.random()
 
 
     def mutate_absolute(self, delta, seed=None):
@@ -51,7 +65,7 @@ class NeuralNet:
         for i in range(self.nLayers - 1):
             for j in range(self.nLayerNodes[i+1]):
                 for k in range(self.nLayerNodes[i]):
-                    self.weights[i][j][k] += delta * random.randint(-500, 500) / 500.0
+                    self.weights[i][j][k] += delta * (2 * random.random() - 1)
 
 
     def mutate(self, sigma, seed=None):
@@ -61,4 +75,4 @@ class NeuralNet:
         for i in range(self.nLayers - 1):
             for j in range(self.nLayerNodes[i+1]):
                 for k in range(self.nLayerNodes[i]):
-                    self.weights[i][j][k] *= 1 + random.randint(-500, 500) / 500.0
+                    self.weights[i][j][k] *= 1 + sigma * (2 * random.random() - 1)
