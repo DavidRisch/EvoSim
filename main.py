@@ -5,6 +5,7 @@ from PIL import ImageTk
 import random
 import math
 import time
+from agent import Agent
 
 
 # pip install pillow
@@ -37,102 +38,6 @@ images = {}
 
 speed = 20  # ticks/second
 speed_before_pause = None
-
-
-class Agent:
-    position = []
-    direction = None
-    health = None
-    birth = None
-    input = []
-    output = [0.1, 0.8]   # temp
-
-    def __init__(self, position, direction):
-        # print("NewAgent")
-        self.position = position
-        self.direction = direction
-        self.health = configuration["Agent_Health"]
-        self.birth = tick_count
-
-    def tick(self):
-        self.input = [0, 0, 0]
-
-        # Food
-        for position in food_positions:
-            distance = self.get_distance(position)
-            if distance < 0.5 + configuration["Food_Diameter"] / 2:
-                food_positions.remove(position)
-                self.eat()
-            elif distance < configuration["Sensor_Food_Range"]:
-                agent_to_food_x = position[0] - self.position[0]
-                agent_to_food_y = position[1] - self.position[1]
-
-                angle = (math.atan2(-agent_to_food_x, -agent_to_food_y) + math.pi) / 2
-
-                direction = angle / math.pi
-                direction = direction - self.direction
-                if direction < 0:
-                    direction = 1 + direction
-
-                size_middle = configuration["Sensor_Food_Middle_Angel"]/360
-                size_side = configuration["Sensor_Food_Side_Angel"]/360
-                if (1 - size_middle/2 - size_side) < direction < (1 - size_middle/2):
-                    self.input[0] += (configuration["Sensor_Food_Range"] - distance) / configuration["Sensor_Food_Range"]
-                elif direction < size_middle/2 or direction > (1 - size_middle/2):
-                    self.input[1] += (configuration["Sensor_Food_Range"] - distance) / configuration["Sensor_Food_Range"]
-                elif size_middle/2 < direction < size_middle/2 + size_side:
-                    self.input[2] += (configuration["Sensor_Food_Range"] - distance) / configuration["Sensor_Food_Range"]
-
-        # Neural Network
-
-        # self.input    float[3]     x >= 0
-        # self.output   float[2]
-        #
-        #
-        #
-        #
-        #
-
-        for i in range(0, len(self.output)):
-            self.output[i] = confine_number(self.output[i], -1, 1)
-
-        # Movement
-        self.direction += self.output[0] * configuration["Agent_MaxTurningSpeed"]
-        self.direction = wrap_direction(self.direction)
-
-        angle = self.direction * 2 * math.pi
-
-        self.position[0] += math.sin(angle) * self.output[1] * configuration["Agent_MaxMovementSpeed"]
-        self.position[1] += math.cos(angle) * self.output[1] * configuration["Agent_MaxMovementSpeed"]
-
-        self.position = wrap_position(self.position)
-
-        # NaturalDecay
-        self.health -= configuration["Agent_NaturalDecay"]
-
-        # Die
-        if self.health <= 0:
-            self.die()
-
-    def eat(self):
-        self.health += configuration["Food_Value"]
-
-    def die(self):
-        agents.remove(self)
-
-    def get_distance(self, position):
-        distance_x = self.position[0] - position[0]
-        distance_y = self.position[1] - position[1]
-        distance = math.sqrt(math.pow(distance_x, 2) + math.pow(distance_y, 2))
-        return distance
-
-    def get_information_string(self):
-        string = "Input: [" + ", ".join(str(e) for e in self.input) + "]\n"
-        string += "Position: [" + str(round(self.position[0], 2)) + ", " + str(round(self.position[1], 2)) + "]\n"
-        string += "Health: " + str(round(self.health, 2)) + "\n"
-        string += "Age: " + str(tick_count - self.birth) + "\n"
-
-        return string
 
 
 def tick():
@@ -216,10 +121,11 @@ def add_food():
 
 def add_agent():
     global agents
+    global tick_count
 
     position = [random.uniform(0, configuration["Area"]), random.uniform(0, configuration["Area"])]
     direction = random.uniform(0, 1)
-    agent = Agent(position, direction)
+    agent = Agent(position, direction, tick_count, configuration)
 
     agents.append(agent)
 
