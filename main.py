@@ -103,7 +103,7 @@ def tick():
                 output[0] = 2 * output[0] - 1
 
                 # Movement
-                agent.direction = output[0] * configuration["Agent_MaxTurningSpeed"]
+                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
                 agent.direction = wrap_direction(agent.direction)
 
                 angle = agent.direction * 2 * math.pi
