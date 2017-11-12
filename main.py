@@ -15,9 +15,9 @@ configuration = {
     "Agent_Health": 100,
     "Agent_MaxMovementSpeed": 0.1,
     "Agent_MaxTurningSpeed": 0.02,
-    "Agent_NaturalDecay": 0.1,
+    "Agent_NaturalDecay": 0.7,
     "Agent_MinPopulation": 15,
-    "Food_Value": 30,
+    "Food_Value": 10,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.1,
     "Sensor_Food_Range": 5,
@@ -67,7 +67,7 @@ def tick():
                         agent_to_food_x = position[0] - agent.position[0]
                         agent_to_food_y = position[1] - agent.position[1]
 
-                        angle = (math.atan2(-agent_to_food_x, -agent_to_food_y) + math.pi) / 2
+                        angle = (math.atan2(-agent_to_food_y, -agent_to_food_x) + math.pi) / 2
 
                         direction = angle / math.pi
                         direction = direction - agent.direction
@@ -95,12 +95,15 @@ def tick():
                 #
                 #
                 #
-                output = [0.1, 0.8]
-                for i in range(0, len(output)):
-                    output[i] = confine_number(output[i], -1, 1)
+                agent.react(sensors)
+                output = agent.output
+
+                # for i in range(0, len(output)):
+                # output[i] = confine_number(2*output[i]-1, -1, 1)
+                output[0] = 2 * output[0] - 1
 
                 # Movement
-                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
+                agent.direction = output[0] * configuration["Agent_MaxTurningSpeed"]
                 agent.direction = wrap_direction(agent.direction)
 
                 angle = agent.direction * 2 * math.pi

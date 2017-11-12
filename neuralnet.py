@@ -10,16 +10,9 @@ class NeuralNet:
     weights = []
     biases = []
 
-    def __init__(self, in_nodes, hidden_layer_nodes, out_nodes):
-        # input layer (first element in 'layers')
-        self.layers = [[0.0 for i in range(in_nodes)]]
-        self.nLayerNodes.append(in_nodes)
-        # hidden layers
-        self.layers.extend([[ 0.0 for j in range(i) ] for i in hidden_layer_nodes])
-        self.nLayerNodes.extend(hidden_layer_nodes)
-        # output layer (last element in 'layers')
-        self.layers.append([0.0 for i in range(out_nodes)])
-        self.nLayerNodes.append(out_nodes)
+    def __init__(self, layer_nodes):
+        self.layers = [[0.0 for i in range(j)] for j in layer_nodes]
+        self.nLayerNodes = layer_nodes
 
         self.nLayers = len(self.nLayerNodes)
 
@@ -29,20 +22,24 @@ class NeuralNet:
                         for j in range(self.nLayerNodes[k])]
                         for k in range(1, self.nLayers)]
         # biases [layer - 1] [node]
-        self.biases = [[0.0 for i in range(self.nLayerNodes[j])] for j in range(1, self.nLayers)]
+        self.biases = [[0.0 for i in range(self.nLayerNodes[j])]
+                       for j in range(1, self.nLayers)]
 
     def feed(self, input_data):
         self.layers[0] = input_data
-        for i in range(1, self.nLayers):
-            for j in range(self.nLayerNodes[i]):
-                node = self.biases[i-1][j]
-                for k in range(self.nLayerNodes[i-1]):
-                    node += self.layers[i-1][k] * self.weights[i-1][j][k]
+        for i in range(self.nLayers - 1):
+            for j in range(self.nLayerNodes[i+1]):
+                node = self.biases[i][j]
+                for k in range(self.nLayerNodes[i+1]):
+                    node += self.layers[i+1][k] * self.weights[i][j][k]
 
-                if abs(node) > 1e-2:        # switch calculation for sigmoid to avoid very large exp-function values
-                    self.layers[i][j] = 1 / (1 + exp( -node ))
+                # switch calculation for sigmoid to
+                # avoid very large exp-function values
+                if node > 0:
+                    self.layers[i+1][j] = 1 / (1 + exp(-node))
                 else:
-                    self.layers[i][j] = exp(node) / (1 + exp(node))
+                    self.layers[i+1][j] = exp(node) / (1 + exp(node))
+
 
         return self.layers[-1]
 
@@ -51,8 +48,8 @@ class NeuralNet:
             random.seed(seed)
 
         for i in range(self.nLayers - 1):
-            for j in range(self.nLayerNodes[i]):
-                for k in range(self.nLayerNodes[i-1]):
+            for j in range(self.nLayerNodes[i+1]):
+                for k in range(self.nLayerNodes[i]):
                         self.weights[i][j][k] = wmin + (wmax-wmin) * random.random()
 
     def mutate_absolute(self, delta, seed=None):
