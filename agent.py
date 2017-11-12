@@ -9,7 +9,8 @@ class Agent:
     birth = None
     configuration = {}
     neuralNet = None
-    output = [0,0]
+    output = [0, 0]
+    highlighted = False
 
     def __init__(self, position, direction, tick_count, configuration, neural_net=None):
         # print("NewAgent")
