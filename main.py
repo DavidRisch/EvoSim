@@ -3,8 +3,8 @@ import tkinter
 from PIL import Image
 from PIL import ImageTk
 import random
-import math
 import time
+import math
 from agent import Agent
 
 
@@ -52,7 +52,72 @@ def tick():
         fill_to_min_population()
 
         for agent in agents:
-            agent.tick()
+                sensors = [0, 0, 0]
+
+                # Food
+                for position in food_positions:
+                    distance = agent.get_distance(position)
+                    if distance < 0.5 + configuration["Food_Diameter"] / 2:
+                        food_positions.remove(position)
+                        agent.eat()
+                    elif distance < configuration["Sensor_Food_Range"]:
+                        agent_to_food_x = position[0] - agent.position[0]
+                        agent_to_food_y = position[1] - agent.position[1]
+
+                        angle = (math.atan2(-agent_to_food_x, -agent_to_food_y) + math.pi) / 2
+
+                        direction = angle / math.pi
+                        direction = direction - agent.direction
+                        if direction < 0:
+                            direction = 1 + direction
+
+                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 360
+                        size_side = configuration["Sensor_Food_Side_Angel"] / 360
+                        if (1 - size_middle / 2 - size_side) < direction < (1 - size_middle / 2):
+                            sensors[0] += (configuration["Sensor_Food_Range"] - distance) / configuration[
+                                "Sensor_Food_Range"]
+                        elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
+                            sensors[1] += (configuration["Sensor_Food_Range"] - distance) / configuration[
+                                "Sensor_Food_Range"]
+                        elif size_middle / 2 < direction < size_middle / 2 + size_side:
+                            sensors[2] += (configuration["Sensor_Food_Range"] - distance) / configuration[
+                                "Sensor_Food_Range"]
+
+                # Neural Network
+
+                # self.sensors  float[3]     x >= 0
+                # self.output      float[2]
+                #
+                #
+                #
+                #
+                #
+                output = [0.1, 0.8]
+                for i in range(0, len(output)):
+                    output[i] = confine_number(output[i], -1, 1)
+
+                # Movement
+                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
+                agent.direction = wrap_direction(agent.direction)
+
+                angle = agent.direction * 2 * math.pi
+
+                agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+                agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+
+                agent.position = wrap_position(agent.position)
+
+                # NaturalDecay
+                agent.health -= configuration["Agent_NaturalDecay"]
+
+                # Die
+                if agent.health <= 0:
+                    agents.remove(agent)
+
+                if highlighted_agent is not None:
+                    if agent == highlighted_agent:
+                        agent.sensors = sensors
+                        agent.output = output
 
         food_to_spawn += configuration["Food_PerTick"]
         while food_to_spawn >= 1:
@@ -72,6 +137,15 @@ def tick():
     tkinter_root.after(time_to_next_tick, tick)
 
 
+def confine_number(number, minimum, maximum):
+    if number < minimum:
+        number = minimum
+    elif number > maximum:
+        number = maximum
+
+    return number
+
+
 def wrap_position(position):
     for i in [0, 1]:
         if position[i] < 0:
@@ -89,15 +163,6 @@ def wrap_direction(direction):
         direction = 1 - direction
 
     return direction
-
-
-def confine_number(number, minimum, maximum):
-    if number < minimum:
-        number = minimum
-    elif number > maximum:
-        number = maximum
-
-    return number
 
 
 def start():
@@ -143,7 +208,8 @@ def draw_frame():
     general_information_text.set(string)
 
     if highlighted_agent is not None:
-        agent_information_text.set(highlighted_agent.get_information_string())
+        agent_information_text.set(highlighted_agent.get_information_string(tick_count, highlighted_agent.sensors,
+                                                                            highlighted_agent.output))
 
 
 def draw_agent(agent):
