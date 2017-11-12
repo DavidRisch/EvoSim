@@ -36,13 +36,16 @@ one_unit_in_px = 0
 agent_images = []
 images = {}
 
+fps = 20
+last_frame_ms = 0
 speed = 20  # ticks/second
-speed_before_pause = None
+speed_before_pause = 0
 
 
 def tick():
     global tick_count
     global food_to_spawn
+    global last_frame_ms
 
     start_ms = time.time()*1000.0
 
@@ -114,26 +117,27 @@ def tick():
                 if agent.health <= 0:
                     agents.remove(agent)
 
-                if highlighted_agent is not None:
-                    if agent == highlighted_agent:
-                        agent.sensors = sensors
-                        agent.output = output
+                agent.sensors = sensors  # for agent.get_information_string
+                agent.output = output
 
         food_to_spawn += configuration["Food_PerTick"]
         while food_to_spawn >= 1:
             food_to_spawn -= 1
             add_food()
 
-    draw_frame()
+    current_ms = time.time() * 1000.0
+
+    if current_ms >= last_frame_ms + round((1/fps)*1000):
+        last_frame_ms = current_ms
+        draw_frame()
 
     if speed != 0:
-        current_ms = time.time()*1000.0
         time_to_next_tick = round((1/speed)*1000 - (current_ms - start_ms))
     else:
         time_to_next_tick = round((1/20)*1000)  # 25fps
 
     if time_to_next_tick < 2:
-        time_to_next_tick = 2
+        time_to_next_tick = 1
     tkinter_root.after(time_to_next_tick, tick)
 
 

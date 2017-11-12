@@ -32,4 +32,6 @@ class Agent:
         string += "Health: " + str(round(self.health, 2)) + "\n"
         string += "Age: " + str(tick_count - self.birth) + "\n"
 
+        return string
+
 
