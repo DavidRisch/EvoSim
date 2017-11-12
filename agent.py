@@ -36,7 +36,7 @@ class Agent:
 
     def get_information_string(self, tick_count, sensors, output):
         string = "Sensors: [" + ", ".join(str(e) for e in sensors) + "]\n"
-        string = "Output: [" + ", ".join(str(e) for e in output) + "]\n"
+        string += "Output: [" + ", ".join(str(e) for e in output) + "]\n"
         string += "Position: [" + str(round(self.position[0], 2)) + ", " + str(round(self.position[1], 2)) + "]\n"
         string += "Health: " + str(round(self.health, 2)) + "\n"
         string += "Age: " + str(tick_count - self.birth) + "\n"
