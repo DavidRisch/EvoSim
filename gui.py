@@ -1,7 +1,8 @@
 from tkinter import *
+from tkinter.ttk import *
 import tkinter
-from PIL import Image    # pip install pillow
-from PIL import ImageTk  # pip install pillow
+from PIL import Image                # pip install pillow
+from PIL import ImageTk              # pip install pillow
 
 
 class Gui:
@@ -16,7 +17,7 @@ class Gui:
     def __init__(self, configuration):
         self.configuration = configuration
 
-        window_width = 5 + self.area_in_px + 5
+        window_width = 5 + self.area_in_px + 5 + 500 + 5
         window_height = 5 + 60 + 5 + self.area_in_px + 5 + 100 + 5
 
         self.tkinter_root = tkinter.Tk()
@@ -36,10 +37,10 @@ class Gui:
 
         self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=1500, orient=HORIZONTAL)
         self.tkinter_root.speed_slider.pack()
-        self.tkinter_root.speed_slider.place(x=(window_width - 405), y=5, width=400, height=65)
+        self.tkinter_root.speed_slider.place(x=(5+self.area_in_px - 405), y=5, width=400, height=65)
 
         label_y = 5 + 60 + 5 + self.area_in_px + 5
-        label_width = (window_width / 2 - 10)
+        label_width = (self.area_in_px / 2 - 10)
 
         self.tkinter_root.agent_information_text = StringVar()
         self.tkinter_root.agent_information_text.set("")
@@ -47,7 +48,7 @@ class Gui:
                                   textvariable=self.tkinter_root.agent_information_text)
         agent_information.pack()
 
-        agent_information.place(x=(window_width / 2 + 5), y=label_y, width=label_width, height=100)
+        agent_information.place(x=(self.area_in_px / 2 + 5), y=label_y, width=label_width, height=100)
 
         self.tkinter_root.general_information_text = StringVar()
         self.tkinter_root.general_information_text.set("")
@@ -58,6 +59,7 @@ class Gui:
         general_information.place(x=5, y=label_y, width=label_width, height=100)
 
         self.prepare_canvas()
+        self.create_table()
 
     def draw_frame(self, agents, food_positions, tick_count):
         self.tkinter_root.canvas.delete("all")
@@ -168,3 +170,50 @@ class Gui:
                 closest_agent = agent
 
         closest_agent.highlighted = True
+
+    def create_table(self):
+        self.tkinter_root.tree_view = Treeview(self.tkinter_root)
+
+        self.tkinter_root.tree_view['columns'] = ('generation', 'age', 'health')
+        self.tkinter_root.tree_view.heading("#0", text='', anchor='w')
+        self.tkinter_root.tree_view.column("#0", anchor="w", width=1)
+        self.tkinter_root.tree_view.heading('generation', text='generation')
+        self.tkinter_root.tree_view.column('generation', anchor='center', width=100)
+        self.tkinter_root.tree_view.heading('age', text='age')
+        self.tkinter_root.tree_view.column('age', anchor='center', width=100)
+        self.tkinter_root.tree_view.heading('health', text='health')
+        self.tkinter_root.tree_view.column('health', anchor='center', width=100)
+
+        self.tkinter_root.tree_view.insert('', 'end', text="", values=('10:00', '10:10', 'Ok'))
+
+        self.tkinter_root.tree_view.pack()
+        self.tkinter_root.tree_view.place(x=810, y=70, width=500, height=self.area_in_px)
+
+    def select_table(self, agents):
+        item = self.tkinter_root.tree_view.item(self.tkinter_root.tree_view.focus())
+        i = int(item["text"])
+
+        for agent in agents:
+            agent.highlighted = False
+
+        agents[i].highlighted = True
+
+    def update_table(self, agents, tick_count):
+        self.tkinter_root.tree_view.delete(*self.tkinter_root.tree_view.get_children())
+
+        i = 0
+        # highlighted = None
+        for agent in agents:
+            generation = -1
+            age = round(tick_count - agent.birth, 2)
+            health = round(agent.health, 2)
+
+            self.tkinter_root.tree_view.insert('', 'end', text=i, values=(generation, age, health), tag=i)
+
+            # if agent.highlighted:
+            #   highlighted = i
+
+            i += 1
+
+        # if highlighted is not None:
+        #   self.tkinter_root.tree_view.selection_set(self.tkinter_root.tree_view.tag_has(highlighted)[0])

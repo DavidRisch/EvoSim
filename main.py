@@ -26,8 +26,11 @@ food_positions = []
 tick_count = 0
 food_to_spawn = 0  # keeps track of food, that needs to be spawned (because configuration["Food_PerTick"] is not an int)
 
+
 fps = 20
+fps_table = 5
 last_frame_ms = 0
+last_table_frame_ms = 0
 speed = 20  # ticks/second
 speed_before_pause = 0
 wait_ever_x_ticks = 10  # prevent program from freezing
@@ -39,6 +42,7 @@ gui = None
 
 def loop():
     global last_frame_ms
+    global last_table_frame_ms
 
     start_ms = time.time() * 1000.0
 
@@ -50,6 +54,10 @@ def loop():
     if current_ms >= last_frame_ms + round((1/fps)*1000):
         last_frame_ms = current_ms
         gui.draw_frame(agents, food_positions, tick_count)
+
+    if current_ms >= last_table_frame_ms + round((1 / fps_table) * 1000):
+        last_table_frame_ms = current_ms
+        gui.update_table(agents, tick_count)
 
     if speed != 0:
         time_to_next_tick = round((1/speed)*1000 - (current_ms - start_ms))
@@ -220,6 +228,7 @@ def start():
     # gui.tkinter_root.canvas.bind("<Button-1>", click_on_canvas)
     gui.tkinter_root.canvas.bind("<Button-1>", lambda event: gui.click_on_canvas(event, agents))
     gui.tkinter_root.bind("<space>", toggle_pause)
+    gui.tkinter_root.tree_view.bind("<<TreeviewSelect>>", lambda event: gui.select_table(agents))
 
     # gui.tkinter_root.canvas.bind("<Button-1>", test_position)
 
@@ -262,6 +271,7 @@ def toggle_pause(event):
         speed_before_pause = speed
         speed = 0
         gui.draw_frame(agents, food_positions, tick_count)
+        gui.update_table(agents, tick_count)
     else:
         speed = speed_before_pause
 
