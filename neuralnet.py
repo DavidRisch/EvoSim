@@ -48,6 +48,7 @@ class NeuralNet:
 
         for i in range(1, self.nLayers):
             for j in range(self.nLayerNodes[i]):
+                self.biases[i-1][j] = wmin + (wmax - wmin) * random.random()
                 for k in range(self.nLayerNodes[i-1]):
                         self.weights[i-1][j][k] = wmin + (wmax-wmin) * random.random()
 
@@ -55,16 +56,18 @@ class NeuralNet:
         if seed is None:
             random.seed(seed)
 
-        for i in range(self.nLayers - 1):
+        for i in range(1, self.nLayers):
             for j in range(self.nLayerNodes[i+1]):
+                self.biases[i-1][j] += delta * (2 * random.random() - 1)
                 for k in range(self.nLayerNodes[i]):
-                    self.weights[i][j][k] += delta * (2 * random.random() - 1)
+                    self.weights[i-1][j][k] += delta * (2 * random.random() - 1)
 
     def mutate(self, sigma, seed=None):
         if seed is None:
             random.seed(seed)
 
-        for i in range(self.nLayers - 1):
-            for j in range(self.nLayerNodes[i+1]):
-                for k in range(self.nLayerNodes[i]):
-                    self.weights[i][j][k] *= 1 + sigma * (2 * random.random() - 1)
+        for i in range(1, self.nLayers):
+            for j in range(self.nLayerNodes[i]):
+                self.biases[i-1][j] *= 1 + sigma * (2 * random.random() - 1)
+                for k in range(self.nLayerNodes[i-1]):
+                    self.weights[i-1][j][k] *= 1 + sigma * (2 * random.random() - 1)
