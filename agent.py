@@ -9,7 +9,8 @@ class Agent:
     birth = None
     configuration = {}
     neuralNet = None
-    output = [0, 0]
+    sensors = []
+    output = []
     highlighted = False
 
     def __init__(self, position, direction, tick_count, configuration, neural_net=None):
@@ -35,9 +36,9 @@ class Agent:
         distance = math.sqrt(math.pow(distance_x, 2) + math.pow(distance_y, 2))
         return distance
 
-    def get_information_string(self, tick_count, sensors, output):
-        string = "Sensors: [" + ", ".join(str(e) for e in sensors) + "]\n"
-        string += "Output: [" + ", ".join(str(e) for e in output) + "]\n"
+    def get_information_string(self, tick_count):
+        string = "Sensors: [" + ", ".join(str(e) for e in self.sensors) + "]\n"
+        string += "Output: [" + ", ".join(str(e) for e in self.output) + "]\n"
         string += "Position: [" + str(round(self.position[0], 2)) + ", " + str(round(self.position[1], 2)) + "]\n"
         string += "Health: " + str(round(self.health, 2)) + "\n"
         string += "Age: " + str(tick_count - self.birth) + "\n"

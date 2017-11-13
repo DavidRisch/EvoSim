@@ -12,11 +12,11 @@ configuration = {
     "Agent_MaxMovementSpeed": 0.1,
     "Agent_MaxTurningSpeed": 0.02,
     "Agent_NaturalDecay": 0.7,
-    "Agent_MinPopulation": 15,
+    "Agent_MinPopulation": 10,
     "Food_Value": 10,
     "Food_Diameter": 0.5,
-    "Food_PerTick": 0.1,
-    "Sensor_Food_Range": 5,
+    "Food_PerTick": 0.06,
+    "Sensor_Food_Range": 3.5,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
 }
@@ -24,7 +24,7 @@ configuration = {
 agents = []
 food_positions = []
 tick_count = 0
-food_to_spawn = 0  # configuration["Food_PerTick"] is not an int
+food_to_spawn = 0  # keeps track of food, that needs to be spawned (because configuration["Food_PerTick"] is not an int)
 
 fps = 20
 last_frame_ms = 0
@@ -57,37 +57,12 @@ def tick():
                         food_positions.remove(position)
                         agent.eat()
                     elif distance < configuration["Sensor_Food_Range"]:
-                        agent_to_food_x = position[0] - agent.position[0]
-                        agent_to_food_y = position[1] - agent.position[1]
 
-                        angle = (math.atan2(-agent_to_food_y, -agent_to_food_x) + math.pi) / 2
+                        sensors = calculate_sensors(agent, position, distance, sensors)
 
-                        direction = angle / math.pi
-                        direction = direction - agent.direction
-                        if direction < 0:
-                            direction = 1 + direction
-
-                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 360
-                        size_side = configuration["Sensor_Food_Side_Angel"] / 360
-                        if (1 - size_middle / 2 - size_side) < direction < (1 - size_middle / 2):
-                            sensors[0] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
-                        elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
-                            sensors[1] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
-                        elif size_middle / 2 < direction < size_middle / 2 + size_side:
-                            sensors[2] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
+                agent.sensors = sensors  # for agent.get_information_string
 
                 # Neural Network
-
-                # self.sensors  float[3]     x >= 0
-                # self.output      float[2]
-                #
-                #
-                #
-                #
-                #
                 agent.react(sensors)
                 output = agent.output
 
@@ -113,9 +88,6 @@ def tick():
                 if agent.health <= 0:
                     agents.remove(agent)
 
-                agent.sensors = sensors  # for agent.get_information_string
-                agent.output = output
-
         food_to_spawn += configuration["Food_PerTick"]
         while food_to_spawn >= 1:
             food_to_spawn -= 1
@@ -138,11 +110,64 @@ def tick():
     gui.tkinter_root.after(time_to_next_tick, tick)
 
 
+def test_position(event):
+    agents[0].highlighted = True
+    food_position = [event.x, gui.area_in_px - event.y]
+    for i in [0, 1]:
+        food_position[i] = food_position[i] / gui.one_unit_in_px
+
+    distance = agents[0].get_distance(food_position)
+
+    print(calculate_sensors(agents[0], food_position, distance, [0, 0, 0]))
+
+
+def calculate_sensors(agent, food_position, distance, old_sensors):
+    sensors = [0, 0, 0]
+
+    direction = calculate_direction_difference(agent.position, food_position, agent.direction)
+
+    size_middle = configuration["Sensor_Food_Middle_Angel"] / 360
+    size_side = configuration["Sensor_Food_Side_Angel"] / 360
+    if (1 - size_middle / 2 - size_side) < direction < (1 - size_middle / 2):
+        sensors[0] = (configuration["Sensor_Food_Range"] - distance) / configuration[
+            "Sensor_Food_Range"]
+    elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
+        sensors[1] = (configuration["Sensor_Food_Range"] - distance) / configuration[
+            "Sensor_Food_Range"]
+    elif size_middle / 2 < direction < size_middle / 2 + size_side:
+        sensors[2] = (configuration["Sensor_Food_Range"] - distance) / configuration[
+            "Sensor_Food_Range"]
+
+    for i in range(0, len(sensors)):
+        sensors[i] = old_sensors[i] + confine_number(sensors[i], 0, None)
+
+    return sensors
+
+
+def calculate_direction_difference(position_a, position_b, direction_a):
+    a_to_b_x = position_b[0] - position_a[0]
+    a_to_b_y = position_b[1] - position_a[1]
+
+    angle = (math.atan2(-a_to_b_y, -a_to_b_x) + math.pi) / 2
+
+    direction = angle / math.pi
+    direction = -direction + 0.25
+
+    direction = direction - direction_a
+    while direction < 0:
+        direction = 1 + direction
+
+    return direction
+
+
 def confine_number(number, minimum, maximum):
-    if number < minimum:
-        number = minimum
-    elif number > maximum:
-        number = maximum
+    if minimum is not None:
+        if number < minimum:
+            number = minimum
+
+    if maximum is not None:
+        if number > maximum:
+            number = maximum
 
     return number
 
@@ -185,6 +210,8 @@ def start():
     gui.tkinter_root.canvas.bind("<Button-1>", lambda event: gui.click_on_canvas(event, agents))
     gui.tkinter_root.bind("<space>", toggle_pause)
 
+    # gui.tkinter_root.canvas.bind("<Button-1>", test_position)
+
     agents = []
     fill_to_min_population()
     gui.draw_frame(agents, food_positions, tick_count)
@@ -223,10 +250,11 @@ def toggle_pause(event):
     if speed != 0:
         speed_before_pause = speed
         speed = 0
+        gui.draw_frame(agents, food_positions, tick_count)
     else:
         speed = speed_before_pause
 
-    gui.speed_slider.set(speed)
+    gui.tkinter_root.speed_slider.set(speed)
 
 
 # noinspection PyUnusedLocal
