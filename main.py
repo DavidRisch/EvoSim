@@ -7,16 +7,15 @@ import time
 import math
 
 configuration = {
-    "Area": 80,
+    "Area": 40,
     "Agent_Health": 100,
     "Agent_MaxMovementSpeed": 0.1,
-    "Agent_MaxTurningSpeed": 3,
-    "Agent_NaturalDecay": 0.1,
+    "Agent_MaxTurningSpeed": 0.02,
+    "Agent_NaturalDecay": 0.075,
     "Agent_MinPopulation": 10,
-    "Food_Value": 20,
+    "Food_Value": 30,
     "Food_Diameter": 0.5,
-    "Food_PerTick": 0.1,
-    "Food_Eat_Range": 0.5,
+    "Food_PerTick": 0.02,
     "Sensor_Food_Range": 8,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
@@ -48,72 +47,39 @@ def tick():
 
         fill_to_min_population()
 
-        for agent in list(agents):
-                food_range = configuration["Sensor_Food_Range"]
-                sensors = [food_range, food_range, food_range]
+        for agent in agents:
+                if tick_count-agent.birth == 2500:
+                    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+
+                sensors = [configuration["Sensor_Food_Range"], configuration["Sensor_Food_Range"], configuration["Sensor_Food_Range"]]
 
                 # Food
-                for position in list(food_positions):
+                for position in food_positions:
                     distance = agent.get_distance(position)
-                    # if distance < 0.5 + configuration["Food_Diameter"] / 2:
-                    if distance < configuration["Food_Eat_Range"]:
+                    if distance < 0.5 + configuration["Food_Diameter"] / 2:
                         food_positions.remove(position)
                         agent.eat()
-                    elif distance < food_range:
-                        agent_to_food_x = position[0] - agent.position[0]
-                        agent_to_food_y = position[1] - agent.position[1]
+                    elif distance < configuration["Sensor_Food_Range"]:
 
-                        #  angle = 0
-                        #  if agent_to_food_y == 0:
-                        #      if agent_to_food_x > 0:
-                        #          angle = 0
-                        #      else:
-                        #          angle = math.pi
-                        #  elif agent_to_food_x == 0:
-                        #      if agent_to_food_y > 0:
-                        #          angle = math.pi / 2
-                        #      else:
-                        #          angle = 3 * math.pi / 2
-                        #  else:
-                        #      if agent_to_food_x > 0 and agent_to_food_y > 0:
-                        #          angle = math.atan(agent_to_food_y / agent_to_food_x)
-                        #      elif agent_to_food_x < 0 and agent_to_food_y > 0:
-                        #          angle = math.atan(agent_to_food_y / -agent_to_food_x) + math.pi/2
-                        #      elif agent_to_food_x < 0 and agent_to_food_y < 0:
-                        #          angle = math.atan(agent_to_food_y / agent_to_food_x) + math.pi
-                        #      else:
-                        #          angle = math.atan(-agent_to_food_y / agent_to_food_x) + 3 * math.pi / 2
-                        angle = math.atan2(agent_to_food_y, agent_to_food_x)
-
-                        delta_phi = angle - agent.angle
-
-                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 180 * math.pi
-                        size_side = configuration["Sensor_Food_Side_Angel"] / 180 * math.pi
-
-                        # in front
-                        if abs(delta_phi) < size_middle/2:
-                            sensors[1] = min(sensors[1], distance)
-                        # to the left
-                        elif size_side + size_middle/2 > delta_phi > size_middle/2:
-                            sensors[0] = min(sensors[0], distance)
-                        elif -(size_side + size_middle/2) < delta_phi < -size_middle/2:
-                            sensors[2] = min(sensors[2], distance)
-                        # sensors = calculate_sensors(agent, position, distance, sensors)
+                        sensors = calculate_sensors(agent, position, distance, sensors)
 
                 agent.sensors = sensors  # for agent.get_information_string
 
                 # Neural Network
                 agent.react(sensors)
-                # print("[" +
-                #       str(round(sensors[0], 2)) + ", " +
-                #       str(round(sensors[1], 2)) + ", " +
-                #       str(round(sensors[2], 2)) + "] => [" +
-                #       str(round(agent.output[0], 2)) + ", " +
-                #       str(round(agent.output[1], 2)) + "]")
-                # agent.direction = 2 * agent.output[1] - 1
+                output = agent.output
 
-                agent.position[0] += math.cos(agent.angle) * agent.output[1] * configuration["Agent_MaxMovementSpeed"]
-                agent.position[1] += math.sin(agent.angle) * agent.output[1] * configuration["Agent_MaxMovementSpeed"]
+                for i in range(0, len(output)):
+                    output[i] = confine_number(2*output[i]-1, -1, 1)
+
+                # Movement
+                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
+                agent.direction = wrap_direction(agent.direction)
+
+                angle = agent.direction * 2 * math.pi
+
+                agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+                agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
 
                 agent.position = wrap_position(agent.position)
 
@@ -122,12 +88,7 @@ def tick():
 
                 # Die
                 if agent.health <= 0:
-                    print("Agent died [Gen. " + str(agent.generation) + "]")
                     agents.remove(agent)
-                elif agent.health > 160:
-                    print("New agent born [Gen. " + str(agent.generation + 1) + "]")
-                    agent.health /= 2
-                    add_agent(agent)
 
         food_to_spawn += configuration["Food_PerTick"]
         while food_to_spawn >= 1:
@@ -162,25 +123,25 @@ def test_position(event):
     print(calculate_sensors(agents[0], food_position, distance, [0, 0, 0]))
 
 
-def calculate_sensors(agent, food_position, distance, old_sensors):
-    sensors = [0, 0, 0]
+def calculate_sensors(agent, food_position, distance, sensors):
 
     direction = calculate_direction_difference(agent.position, food_position, agent.direction)
 
     size_middle = configuration["Sensor_Food_Middle_Angel"] / 360
     size_side = configuration["Sensor_Food_Side_Angel"] / 360
     if (1 - size_middle / 2 - size_side) < direction < (1 - size_middle / 2):
-        sensors[0] = (configuration["Sensor_Food_Range"] - distance) / configuration[
-            "Sensor_Food_Range"]
-    elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
-        sensors[1] = (configuration["Sensor_Food_Range"] - distance) / configuration[
-            "Sensor_Food_Range"]
-    elif size_middle / 2 < direction < size_middle / 2 + size_side:
-        sensors[2] = (configuration["Sensor_Food_Range"] - distance) / configuration[
-            "Sensor_Food_Range"]
+        if sensors[0] > distance:
+            sensors[0] = distance
 
-    for i in range(0, len(sensors)):
-        sensors[i] = old_sensors[i] + confine_number(sensors[i], 0, None)
+    elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
+        if sensors[1] > distance:
+            sensors[1] = distance
+
+    elif size_middle / 2 < direction < size_middle / 2 + size_side:
+        if sensors[2] > distance:
+            sensors[2] = distance
+
+
 
     return sensors
 
@@ -272,14 +233,14 @@ def add_food():
     food_positions.append(position)
 
 
-def add_agent(parent=None):
+def add_agent():
     global agents
     global tick_count
 
     position = [random.uniform(0, configuration["Area"]), random.uniform(0, configuration["Area"])]
-    angle = random.uniform(0, 2*math.pi)
+    direction = random.uniform(0, 1)
+    agent = Agent(position, direction, tick_count, configuration)
 
-    agent = Agent(position, angle, tick_count, configuration, parent)
     agents.append(agent)
 
 
