@@ -7,17 +7,17 @@ import time
 import math
 
 configuration = {
-    "Area": 15,
+    "Area": 80,
     "Agent_Health": 100,
     "Agent_MaxMovementSpeed": 0.1,
     "Agent_MaxTurningSpeed": 3,
     "Agent_NaturalDecay": 0.1,
-    "Agent_MinPopulation": 15,
-    "Food_Value": 10,
+    "Agent_MinPopulation": 10,
+    "Food_Value": 20,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.1,
     "Food_Eat_Range": 0.5,
-    "Sensor_Food_Range": 4,
+    "Sensor_Food_Range": 8,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
 }
@@ -124,7 +124,7 @@ def tick():
                 if agent.health <= 0:
                     print("Agent died [Gen. " + str(agent.generation) + "]")
                     agents.remove(agent)
-                elif agent.health > 110:
+                elif agent.health > 160:
                     print("New agent born [Gen. " + str(agent.generation + 1) + "]")
                     agent.health /= 2
                     add_agent(agent)
