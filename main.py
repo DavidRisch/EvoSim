@@ -16,7 +16,7 @@ configuration = {
     "Food_Value": 10,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.1,
-    "Sensor_Food_Range": 10,
+    "Sensor_Food_Range": 4,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
 }
