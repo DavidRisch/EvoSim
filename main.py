@@ -58,45 +58,44 @@ def tick():
                         food_positions.remove(position)
                         agent.eat()
                     elif distance < configuration["Sensor_Food_Range"]:
-<<<<<<< HEAD
-                    #    agent_to_food_x = position[0] - agent.position[0]
-                    #    agent_to_food_y = position[1] - agent.position[1]
+                        agent_to_food_x = position[0] - agent.position[0]
+                        agent_to_food_y = position[1] - agent.position[1]
 
-                    #    angle = 0
-                    #    if agent_to_food_y == 0:
-                    #        if agent_to_food_x > 0:
-                    #            angle = 0
-                    #        else:
-                    #            angle = math.pi
-                    #    elif agent_to_food_x == 0:
-                    #        if agent_to_food_y > 0:
-                    #            angle = math.pi / 2
-                    #        else:
-                    #            angle = 3 * math.pi / 2
-                    #    else:
-                    #        if agent_to_food_x > 0 and agent_to_food_y > 0:
-                    #            angle = math.atan(agent_to_food_y / agent_to_food_x)
-                    #        elif agent_to_food_x < 0 and agent_to_food_y > 0:
-                    #            angle = math.atan(agent_to_food_y / -agent_to_food_x) + math.pi/2
-                    #        elif agent_to_food_x < 0 and agent_to_food_y < 0:
-                    #            angle = math.atan(agent_to_food_y / agent_to_food_x) + math.pi
-                    #        else:
-                    #            angle = math.atan(-agent_to_food_y / agent_to_food_x) + 3 * math.pi / 2
+                        angle = 0
+                        if agent_to_food_y == 0:
+                            if agent_to_food_x > 0:
+                                angle = 0
+                            else:
+                                angle = math.pi
+                        elif agent_to_food_x == 0:
+                            if agent_to_food_y > 0:
+                                angle = math.pi / 2
+                            else:
+                                angle = 3 * math.pi / 2
+                        else:
+                            if agent_to_food_x > 0 and agent_to_food_y > 0:
+                                angle = math.atan(agent_to_food_y / agent_to_food_x)
+                            elif agent_to_food_x < 0 and agent_to_food_y > 0:
+                                angle = math.atan(agent_to_food_y / -agent_to_food_x) + math.pi/2
+                            elif agent_to_food_x < 0 and agent_to_food_y < 0:
+                                angle = math.atan(agent_to_food_y / agent_to_food_x) + math.pi
+                            else:
+                                angle = math.atan(-agent_to_food_y / agent_to_food_x) + 3 * math.pi / 2
 
-                    #    delta_phi = angle - agent.angle
+                        delta_phi = angle - agent.angle
 
-                    #    size_middle = configuration["Sensor_Food_Middle_Angel"] / 180 * math.pi
-                    #    size_side = configuration["Sensor_Food_Side_Angel"] / 180 * math.pi
+                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 180 * math.pi
+                        size_side = configuration["Sensor_Food_Side_Angel"] / 180 * math.pi
 
-                    #    # in front
-                    #    if abs(delta_phi) < size_middle/2:
-                    #        sensors[1] = min(sensors[1], distance)
-                    #    # to the left
-                    #    elif size_side + size_middle/2 > delta_phi > size_middle/2:
-                    #        sensors[0] = min(sensors[0], distance)
-                    #    elif -(size_side + size_middle/2) < delta_phi < -size_middle/2:
-                    #        sensors[2] = min(sensors[2], distance)
-                        sensors = calculate_sensors(agent, position, distance, sensors)
+                        # in front
+                        if abs(delta_phi) < size_middle/2:
+                            sensors[1] = min(sensors[1], distance)
+                        # to the left
+                        elif size_side + size_middle/2 > delta_phi > size_middle/2:
+                            sensors[0] = min(sensors[0], distance)
+                        elif -(size_side + size_middle/2) < delta_phi < -size_middle/2:
+                            sensors[2] = min(sensors[2], distance)
+                        # sensors = calculate_sensors(agent, position, distance, sensors)
 
                 agent.sensors = sensors  # for agent.get_information_string
 

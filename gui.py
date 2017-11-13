@@ -82,8 +82,8 @@ class Gui:
         if agent.highlighted:
             self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Highlight"])
 
-            angle = 360 * agent.direction
-            angle = -angle + 90
+            angle = agent.angle / math.pi * 180
+            # angle = -angle + 90
             sensor_middle_angle = self.configuration["Sensor_Food_Middle_Angel"]
             sensor_side_angle = self.configuration["Sensor_Food_Side_Angel"]
 
