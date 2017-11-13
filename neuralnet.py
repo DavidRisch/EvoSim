@@ -27,19 +27,18 @@ class NeuralNet:
 
     def feed(self, input_data):
         self.layers[0] = input_data
-        for i in range(self.nLayers - 1):
-            for j in range(self.nLayerNodes[i+1]):
-                node = self.biases[i][j]
-                for k in range(self.nLayerNodes[i+1]):
-                    node += self.layers[i+1][k] * self.weights[i][j][k]
+        for i in range(1, self.nLayers):
+            for j in range(self.nLayerNodes[i]):
+                node = self.biases[i-1][j]
+                for k in range(self.nLayerNodes[i-1]):
+                    node += self.layers[i-1][k] * self.weights[i-1][j][k]
 
                 # switch calculation for sigmoid to
                 # avoid very large exp-function values
                 if node > 0:
-                    self.layers[i+1][j] = 1 / (1 + exp(-node))
+                    self.layers[i][j] = 1 / (1 + exp(-node))
                 else:
-                    self.layers[i+1][j] = exp(node) / (1 + exp(node))
-
+                    self.layers[i][j] = exp(node) / (1 + exp(node))
 
         return self.layers[-1]
 
@@ -47,10 +46,10 @@ class NeuralNet:
         if seed is None:
             random.seed(seed)
 
-        for i in range(self.nLayers - 1):
-            for j in range(self.nLayerNodes[i+1]):
-                for k in range(self.nLayerNodes[i]):
-                        self.weights[i][j][k] = wmin + (wmax-wmin) * random.random()
+        for i in range(1, self.nLayers):
+            for j in range(self.nLayerNodes[i]):
+                for k in range(self.nLayerNodes[i-1]):
+                        self.weights[i-1][j][k] = wmin + (wmax-wmin) * random.random()
 
     def mutate_absolute(self, delta, seed=None):
         if seed is None:

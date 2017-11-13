@@ -2,7 +2,7 @@ from tkinter import *
 import tkinter
 from PIL import Image    # pip install pillow
 from PIL import ImageTk  # pip install pillow
-
+import math
 
 class Gui:
     configuration = {}
@@ -60,8 +60,7 @@ class Gui:
         for agent in agents:
             self.draw_agent(agent)
             if agent.highlighted:
-                self.tkinter_root.agent_information_text.set(agent.get_information_string(tick_count, [],
-                                                                                          agent.output))
+                self.tkinter_root.agent_information_text.set(agent.get_information_string(tick_count))
 
         for position in food_positions:
             self.draw_food(position)
@@ -71,9 +70,8 @@ class Gui:
         self.tkinter_root.general_information_text.set(string)
 
     def draw_agent(self, agent):
-        image_index = round(agent.direction * 60)
-        if image_index == 60:
-            image_index = 0
+        image_index = round(agent.angle / 2 / math.pi * 60)
+        image_index %= 60
         image = self.agent_images[image_index]
 
         center_x = agent.position[0] * self.one_unit_in_px
@@ -101,7 +99,7 @@ class Gui:
         agent_image = Image.open("graphics/Agent.png")
         for i in range(0, 60):
             image = agent_image
-            image = image.rotate(-(i / 60) * 360)
+            image = image.rotate((i / 60) * 360 - 90)
             image = image.resize((self.one_unit_in_px, self.one_unit_in_px), Image.ANTIALIAS)
             image = ImageTk.PhotoImage(image)
 

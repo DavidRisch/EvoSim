@@ -10,13 +10,13 @@ configuration = {
     "Area": 15,
     "Agent_Health": 100,
     "Agent_MaxMovementSpeed": 0.1,
-    "Agent_MaxTurningSpeed": 0.02,
-    "Agent_NaturalDecay": 0.7,
+    "Agent_MaxTurningSpeed": 3,
+    "Agent_NaturalDecay": 0.2,
     "Agent_MinPopulation": 15,
     "Food_Value": 10,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.1,
-    "Sensor_Food_Range": 5,
+    "Sensor_Food_Range": 10,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
 }
@@ -48,7 +48,8 @@ def tick():
         fill_to_min_population()
 
         for agent in agents:
-                sensors = [0, 0, 0]
+                food_range = configuration["Sensor_Food_Range"]
+                sensors = [food_range, food_range, food_range]
 
                 # Food
                 for position in food_positions:
@@ -60,49 +61,54 @@ def tick():
                         agent_to_food_x = position[0] - agent.position[0]
                         agent_to_food_y = position[1] - agent.position[1]
 
-                        angle = (math.atan2(-agent_to_food_y, -agent_to_food_x) + math.pi) / 2
+                        angle = 0
+                        if agent_to_food_y == 0:
+                            if agent_to_food_x > 0:
+                                angle = 0
+                            else:
+                                angle = math.pi
+                        elif agent_to_food_x == 0:
+                            if agent_to_food_y > 0:
+                                angle = math.pi / 2
+                            else:
+                                angle = 3 * math.pi / 2
+                        else:
+                            if agent_to_food_x > 0 and agent_to_food_y > 0:
+                                angle = math.atan(agent_to_food_y / agent_to_food_x)
+                            elif agent_to_food_x < 0 and agent_to_food_y > 0:
+                                angle = math.atan(agent_to_food_y / -agent_to_food_x) + math.pi/2
+                            elif agent_to_food_x < 0 and agent_to_food_y < 0:
+                                angle = math.atan(agent_to_food_y / agent_to_food_x) + math.pi
+                            else:
+                                angle = math.atan(-agent_to_food_y / agent_to_food_x) + 3 * math.pi / 2
 
-                        direction = angle / math.pi
-                        direction = direction - agent.direction
-                        if direction < 0:
-                            direction = 1 + direction
+                        delta_phi = angle - agent.angle
 
-                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 360
-                        size_side = configuration["Sensor_Food_Side_Angel"] / 360
-                        if (1 - size_middle / 2 - size_side) < direction < (1 - size_middle / 2):
-                            sensors[0] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
-                        elif direction < size_middle / 2 or direction > (1 - size_middle / 2):
-                            sensors[1] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
-                        elif size_middle / 2 < direction < size_middle / 2 + size_side:
-                            sensors[2] += (configuration["Sensor_Food_Range"] - distance) / configuration[
-                                "Sensor_Food_Range"]
+                        size_middle = configuration["Sensor_Food_Middle_Angel"] / 180 * math.pi
+                        size_side = configuration["Sensor_Food_Side_Angel"] / 180 * math.pi
+
+                        # in front
+                        if abs(delta_phi) < size_middle/2:
+                            sensors[1] = min(sensors[1], distance)
+                        # to the left
+                        elif size_side + size_middle/2 > delta_phi > size_middle/2:
+                            sensors[0] = min(sensors[0], distance)
+                        elif -(size_side + size_middle/2) < delta_phi < -size_middle/2:
+                            sensors[2] = min(sensors[2], distance)
 
                 # Neural Network
 
-                # self.sensors  float[3]     x >= 0
-                # self.output      float[2]
-                #
-                #
-                #
-                #
-                #
                 agent.react(sensors)
-                output = agent.output
+                # print("[" +
+                #       str(round(sensors[0], 2)) + ", " +
+                #       str(round(sensors[1], 2)) + ", " +
+                #       str(round(sensors[2], 2)) + "] => [" +
+                #       str(round(agent.output[0], 2)) + ", " +
+                #       str(round(agent.output[1], 2)) + "]")
+                # agent.direction = 2 * agent.output[1] - 1
 
-                # for i in range(0, len(output)):
-                # output[i] = confine_number(2*output[i]-1, -1, 1)
-                output[0] = 2 * output[0] - 1
-
-                # Movement
-                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
-                agent.direction = wrap_direction(agent.direction)
-
-                angle = agent.direction * 2 * math.pi
-
-                agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
-                agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+                agent.position[0] += math.cos(agent.angle) * agent.output[1] * configuration["Agent_MaxMovementSpeed"]
+                agent.position[1] += math.sin(agent.angle) * agent.output[1] * configuration["Agent_MaxMovementSpeed"]
 
                 agent.position = wrap_position(agent.position)
 
@@ -112,9 +118,10 @@ def tick():
                 # Die
                 if agent.health <= 0:
                     agents.remove(agent)
-
-                agent.sensors = sensors  # for agent.get_information_string
-                agent.output = output
+                elif agent.health > 160:
+                    print("New agent born")
+                    agent.health /= 2
+                    add_agent(agent)
 
         food_to_spawn += configuration["Food_PerTick"]
         while food_to_spawn >= 1:
@@ -204,13 +211,17 @@ def add_food():
     food_positions.append(position)
 
 
-def add_agent():
+def add_agent(parent=None):
     global agents
     global tick_count
 
     position = [random.uniform(0, configuration["Area"]), random.uniform(0, configuration["Area"])]
-    direction = random.uniform(0, 1)
-    agent = Agent(position, direction, tick_count, configuration)
+    angle = random.uniform(0, 2*math.pi)
+
+    if parent is not None:
+        agent = Agent(position, angle, tick_count, configuration, parent.neuralNet)
+    else:
+        agent = Agent(position, angle, tick_count, configuration)
 
     agents.append(agent)
 
@@ -226,7 +237,7 @@ def toggle_pause(event):
     else:
         speed = speed_before_pause
 
-    gui.speed_slider.set(speed)
+    gui.tkinter_root.speed_slider.set(speed)
 
 
 # noinspection PyUnusedLocal
