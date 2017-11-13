@@ -13,20 +13,22 @@ class Agent:
     output = []
     highlighted = False
     marked = False
+    generation = 0
 
-    def __init__(self, position, direction, tick_count, configuration, neural_net=None):
+    def __init__(self, position, direction, tick_count, configuration, parent=None):
         # print("NewAgent")
         self.position = position
         self.direction = direction
         self.health = configuration["Agent_Health"]
         self.birth = tick_count
         self.configuration = configuration
-        if neural_net is None:
+        if parent is None:
             self.neuralNet = NeuralNet([3, 3, 2])
             self.neuralNet.randomize_weights(-10, 10)
         else:
-            self.neuralNet = neural_net
-            self.neuralNet.mutate(0.1)
+            self.neuralNet = parent.neuralNet
+            self.mutate()
+            self.generation = parent.generation + 1
 
     def eat(self):
         self.health += self.configuration["Food_Value"]
@@ -50,4 +52,4 @@ class Agent:
         self.output = self.neuralNet.feed(sensors)
 
     def mutate(self):
-        self.neuralNet.mutate_absolute(1)
+        self.neuralNet.mutate(0.1)

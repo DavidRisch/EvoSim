@@ -114,6 +114,9 @@ def tick():
             # Die
             if agent.health <= 0:
                 agents.remove(agent)
+            elif agent.health > 160:
+                agent.health /= 2
+                add_agent(agent)
 
     food_to_spawn += configuration["Food_PerTick"]
     while food_to_spawn >= 1:
@@ -242,13 +245,13 @@ def add_food():
     food_positions.append(position)
 
 
-def add_agent():
+def add_agent(parent=None):
     global agents
     global tick_count
 
     position = [random.uniform(0, configuration["Area"]), random.uniform(0, configuration["Area"])]
     direction = random.uniform(0, 1)
-    agent = Agent(position, direction, tick_count, configuration)
+    agent = Agent(position, direction, tick_count, configuration, parent)
 
     agents.append(agent)
 
