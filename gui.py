@@ -82,6 +82,29 @@ class Gui:
         if agent.highlighted:
             self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Highlight"])
 
+            angle = 360 * agent.direction
+            angle = -angle + 90
+            sensor_middle_angle = self.configuration["Sensor_Food_Middle_Angel"]
+            sensor_side_angle = self.configuration["Sensor_Food_Side_Angel"]
+
+            sensor_range = self.configuration["Sensor_Food_Range"] * self.one_unit_in_px
+
+            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
+                                                center_x + sensor_range, center_y + sensor_range,
+                                                outline="#999",
+                                                start=angle + sensor_middle_angle / 2 + sensor_side_angle,
+                                                extent=-sensor_side_angle)
+            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
+                                                center_x + sensor_range, center_y + sensor_range,
+                                                outline="#999",
+                                                start=angle - sensor_middle_angle / 2,
+                                                extent=sensor_middle_angle)
+            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
+                                                center_x + sensor_range, center_y + sensor_range,
+                                                outline="#999",
+                                                start=angle - sensor_middle_angle / 2 - sensor_side_angle,
+                                                extent=sensor_side_angle)
+
     def draw_food(self, position):
         self.tkinter_root.canvas.create_image(position[0] * self.one_unit_in_px,
                                               self.area_in_px - position[1] * self.one_unit_in_px,
@@ -114,63 +137,6 @@ class Gui:
         size = round(self.one_unit_in_px * 0.5)
         image = image.resize((size, size), Image.ANTIALIAS)
         self.images["Highlight"] = ImageTk.PhotoImage(image)
-
-    # def click_on_canvas(self, event):
-    #     global highlighted_agent
-    #
-    #     position = [event.x, area_in_px - event.y]
-    #     for i in [0, 1]:
-    #         position[i] = position[i] / one_unit_in_px
-    #
-    #     closest_distance = 9999999999
-    #     closest_agent = None
-    #
-    #     for agent in agents:
-    #         distance = agent.get_distance(position)
-    #         if distance < closest_distance:
-    #             closest_distance = distance
-    #             closest_agent = agent
-    #
-    #     highlighted_agent = closest_agent
-
-    # def toggle_pause(self, event=None):
-    #     global speed
-    #     global speed_before_pause
-    #
-    #     if speed != 0:
-    #         speed_before_pause = speed
-    #         speed = event.type  # suppress error (unused value)
-    #         speed = 0
-    #     else:
-    #         speed = speed_before_pause
-    #
-    #     speed_slider.set(speed)
-
-    # def set_speed(value):
-    #     global speed
-    #     speed = int(value)
-
-    # def save(event):
-    #     print("Saving...")
-    #     agents_data = []
-    #     for agent in agents:
-    #         agent_data = {
-    #             "position": agent.position,
-    #             "direction": agent.direction,
-    #             "health": agent.health,
-    #         }
-    #         agents_data.append(agent_data)
-    #
-    #     data = {
-    #         "agent_data": agents_data,
-    #         "configuration": configuration,
-    #         "food_positions": food_positions,
-    #     }
-    #     print(data)
-    #     saveload.save(data)
-    #
-    # def load(event):
-    #     print("Loading...")
 
     def click_on_canvas(self, event, agents):
         position = [event.x, self.area_in_px - event.y]

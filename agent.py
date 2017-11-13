@@ -9,7 +9,8 @@ class Agent:
     birth = None
     configuration = {}
     neuralNet = None
-    output = [0, 0]
+    sensors = []
+    output = []
     highlighted = False
 
     def __init__(self, position, angle, tick_count, configuration, neural_net=None):
