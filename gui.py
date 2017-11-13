@@ -30,7 +30,11 @@ class Gui:
         self.tkinter_root.button_load.pack()
         self.tkinter_root.button_load.place(x=70, y=5, width=60, height=30)
 
-        self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=800, orient=HORIZONTAL)
+        self.tkinter_root.button_jump = tkinter.Button(self.tkinter_root, text="Jump 1 tick [y]", fg="black")
+        self.tkinter_root.button_jump.pack()
+        self.tkinter_root.button_jump.place(x=140, y=5, width=100, height=30)
+
+        self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=1500, orient=HORIZONTAL)
         self.tkinter_root.speed_slider.pack()
         self.tkinter_root.speed_slider.place(x=(window_width - 405), y=5, width=400, height=65)
 
@@ -106,6 +110,9 @@ class Gui:
                                                 start=angle - sensor_middle_angle / 2 - sensor_side_angle,
                                                 extent=sensor_side_angle)
 
+        if agent.marked:
+            self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Marker"])
+
     def draw_food(self, position):
         self.tkinter_root.canvas.create_image(position[0] * self.one_unit_in_px,
                                               self.area_in_px - position[1] * self.one_unit_in_px,
@@ -138,6 +145,11 @@ class Gui:
         size = round(self.one_unit_in_px * 0.5)
         image = image.resize((size, size), Image.ANTIALIAS)
         self.images["Highlight"] = ImageTk.PhotoImage(image)
+
+        image = Image.open("graphics/Marker.png")
+        size = round(self.one_unit_in_px * 1)
+        image = image.resize((size, size), Image.ANTIALIAS)
+        self.images["Marker"] = ImageTk.PhotoImage(image)
 
     def click_on_canvas(self, event, agents):
         position = [event.x, self.area_in_px - event.y]

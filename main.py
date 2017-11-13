@@ -11,7 +11,7 @@ configuration = {
     "Agent_Health": 100,
     "Agent_MaxMovementSpeed": 0.1,
     "Agent_MaxTurningSpeed": 0.02,
-    "Agent_NaturalDecay": 0.075,
+    "Agent_NaturalDecay": 0.1,
     "Agent_MinPopulation": 10,
     "Food_Value": 30,
     "Food_Diameter": 0.5,
@@ -30,70 +30,20 @@ fps = 20
 last_frame_ms = 0
 speed = 20  # ticks/second
 speed_before_pause = 0
+wait_ever_x_ticks = 10  # prevent program from freezing
+
+mark_agents_at_tick = 2000
 
 gui = None
 
 
-def tick():
-    global gui
-    global tick_count
-    global food_to_spawn
+def loop():
     global last_frame_ms
 
-    start_ms = time.time()*1000.0
+    start_ms = time.time() * 1000.0
 
     if speed != 0:
-        tick_count += 1
-
-        fill_to_min_population()
-
-        for agent in agents:
-                if tick_count-agent.birth == 2500:
-                    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-
-                sensors = [configuration["Sensor_Food_Range"], configuration["Sensor_Food_Range"], configuration["Sensor_Food_Range"]]
-
-                # Food
-                for position in food_positions:
-                    distance = agent.get_distance(position)
-                    if distance < 0.5 + configuration["Food_Diameter"] / 2:
-                        food_positions.remove(position)
-                        agent.eat()
-                    elif distance < configuration["Sensor_Food_Range"]:
-
-                        sensors = calculate_sensors(agent, position, distance, sensors)
-
-                agent.sensors = sensors  # for agent.get_information_string
-
-                # Neural Network
-                agent.react(sensors)
-                output = agent.output
-
-                for i in range(0, len(output)):
-                    output[i] = confine_number(2*output[i]-1, -1, 1)
-
-                # Movement
-                agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
-                agent.direction = wrap_direction(agent.direction)
-
-                angle = agent.direction * 2 * math.pi
-
-                agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
-                agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
-
-                agent.position = wrap_position(agent.position)
-
-                # NaturalDecay
-                agent.health -= configuration["Agent_NaturalDecay"]
-
-                # Die
-                if agent.health <= 0:
-                    agents.remove(agent)
-
-        food_to_spawn += configuration["Food_PerTick"]
-        while food_to_spawn >= 1:
-            food_to_spawn -= 1
-            add_food()
+        tick()
 
     current_ms = time.time() * 1000.0
 
@@ -106,10 +56,69 @@ def tick():
     else:
         time_to_next_tick = round((1/20)*1000)  # 25fps
 
-    if time_to_next_tick < 2:
+    if time_to_next_tick <= 1 and tick_count % wait_ever_x_ticks == 0:
         time_to_next_tick = 1
 
-    gui.tkinter_root.after(time_to_next_tick, tick)
+    gui.tkinter_root.after(time_to_next_tick, loop)
+
+
+def tick():
+    global tick_count
+    global food_to_spawn
+
+    tick_count += 1
+
+    fill_to_min_population()
+
+    for agent in agents:
+            if tick_count-agent.birth == mark_agents_at_tick:
+                agent.marked = True
+
+            sensors = [configuration["Sensor_Food_Range"],
+                       configuration["Sensor_Food_Range"],
+                       configuration["Sensor_Food_Range"]]
+
+            # Food
+            for position in food_positions:
+                distance = agent.get_distance(position)
+                if distance < 0.5 + configuration["Food_Diameter"] / 2:
+                    food_positions.remove(position)
+                    agent.eat()
+                elif distance < configuration["Sensor_Food_Range"]:
+
+                    sensors = calculate_sensors(agent, position, distance, sensors)
+
+            agent.sensors = sensors  # for agent.get_information_string
+
+            # Neural Network
+            agent.react(sensors)
+            output = agent.output
+
+            for i in range(0, len(output)):
+                output[i] = confine_number(2*output[i]-1, -1, 1)
+
+            # Movement
+            agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
+            agent.direction = wrap_direction(agent.direction)
+
+            angle = agent.direction * 2 * math.pi
+
+            agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+            agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+
+            agent.position = wrap_position(agent.position)
+
+            # NaturalDecay
+            agent.health -= configuration["Agent_NaturalDecay"]
+
+            # Die
+            if agent.health <= 0:
+                agents.remove(agent)
+
+    food_to_spawn += configuration["Food_PerTick"]
+    while food_to_spawn >= 1:
+        food_to_spawn -= 1
+        add_food()
 
 
 def test_position(event):
@@ -140,8 +149,6 @@ def calculate_sensors(agent, food_position, distance, sensors):
     elif size_middle / 2 < direction < size_middle / 2 + size_side:
         if sensors[2] > distance:
             sensors[2] = distance
-
-
 
     return sensors
 
@@ -203,6 +210,8 @@ def start():
 
     gui.tkinter_root.button_save.bind("<Button-1>", save)
     gui.tkinter_root.button_load.bind("<Button-1>", load)
+    gui.tkinter_root.button_jump.bind("<Button-1>", jump)
+    gui.tkinter_root.bind("y", jump)
     gui.tkinter_root.speed_slider.bind("<B1-Motion>", set_speed)
     gui.tkinter_root.speed_slider.bind("<Button-1>", set_speed)
     gui.tkinter_root.speed_slider.bind("<ButtonRelease-1>", set_speed)
@@ -218,7 +227,7 @@ def start():
     fill_to_min_population()
     gui.draw_frame(agents, food_positions, tick_count)
 
-    gui.tkinter_root.after(500, tick)
+    gui.tkinter_root.after(500, loop)
     gui.tkinter_root.mainloop()
 
 
@@ -291,6 +300,11 @@ def save(event):
 # noinspection PyUnusedLocal
 def load(event):
     print("Loading...")
+
+
+# noinspection PyUnusedLocal
+def jump(event):
+    tick()
 
 
 start()

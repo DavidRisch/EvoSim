@@ -4,7 +4,7 @@ from neuralnet import NeuralNet
 
 class Agent:
     position = []
-    direction = None
+    direction = None  # 0 to 1 clockwise, 0 is facing up
     health = None
     birth = None
     configuration = {}
@@ -12,6 +12,7 @@ class Agent:
     sensors = []
     output = []
     highlighted = False
+    marked = False
 
     def __init__(self, position, direction, tick_count, configuration, neural_net=None):
         # print("NewAgent")
