@@ -5,6 +5,7 @@ import saveload
 import random
 import time
 import math
+import threading
 
 configuration = {
     "Area": 40,
@@ -13,9 +14,9 @@ configuration = {
     "Agent_MaxTurningSpeed": 0.02,
     "Agent_NaturalDecay": 0.1,
     "Agent_MinPopulation": 10,
-    "Food_Value": 30,
+    "Food_Value": 50,
     "Food_Diameter": 0.5,
-    "Food_PerTick": 0.02,
+    "Food_PerTick": 0.035,
     "Sensor_Food_Range": 8,
     "Sensor_Food_Middle_Angel": 30,
     "Sensor_Food_Side_Angel": 30,
@@ -33,11 +34,36 @@ last_frame_ms = 0
 last_table_frame_ms = 0
 speed = 20  # ticks/second
 speed_before_pause = 0
-wait_ever_x_ticks = 10  # prevent program from freezing
+wait_ever_x_ticks = 25  # prevent program from freezing
+number_of_threads = 4
 
 mark_agents_at_tick = 2000
 
 gui = None
+
+
+thread_tick_tasks = []
+exit_tasks = False
+
+
+class TickThread (threading.Thread):
+    def __init__(self, thread_id, name):
+        threading.Thread.__init__(self)
+        self.thread_id = thread_id
+        self.name = name
+
+    def run(self):
+        print("Starting " + self.name)
+        while not exit_tasks:
+            if thread_tick_tasks[self.thread_id] is not None:
+                for agent in thread_tick_tasks[self.thread_id]:
+                    if agent is not None:
+                        tick_agent(agent)
+
+                thread_tick_tasks[self.thread_id] = None
+
+            time.sleep(0.0001)  # 0.1ms
+        print("Exiting " + self.name)
 
 
 def loop():
@@ -78,58 +104,80 @@ def tick():
 
     fill_to_min_population()
 
+    size = math.floor(len(agents) / number_of_threads)
+
+    for i in range(0, number_of_threads-1):
+        thread_tick_tasks[i] = agents[:(size*(i+1))]
+
+    thread_tick_tasks[number_of_threads - 1] = agents[(size * (number_of_threads - 1)):]
+
+    tasks_complete = False
+    while not tasks_complete:
+        time.sleep(0.0001)  # 0.1ms
+        tasks_complete = True
+        for tick_tasks in thread_tick_tasks:
+            if tick_tasks is not None:
+                tasks_complete = False
+
     for agent in agents:
-            if tick_count-agent.birth == mark_agents_at_tick:
-                agent.marked = True
+        agent.direction += agent.direction_change
+        agent.direction = wrap_direction(agent.direction)
+        agent.position[0] += agent.position_change_x
+        agent.position[1] += agent.position_change_y
+        agent.position = wrap_position(agent.position)
 
-            sensors = [configuration["Sensor_Food_Range"],
-                       configuration["Sensor_Food_Range"],
-                       configuration["Sensor_Food_Range"]]
-
-            # Food
-            for position in food_positions:
-                distance = agent.get_distance(position)
-                if distance < 0.5 + configuration["Food_Diameter"] / 2:
-                    food_positions.remove(position)
-                    agent.eat()
-                elif distance < configuration["Sensor_Food_Range"]:
-
-                    sensors = calculate_sensors(agent, position, distance, sensors)
-
-            agent.sensors = sensors  # for agent.get_information_string
-
-            # Neural Network
-            agent.react(sensors)
-            output = agent.output
-
-            for i in range(0, len(output)):
-                output[i] = confine_number(2*output[i]-1, -1, 1)
-
-            # Movement
-            agent.direction += output[0] * configuration["Agent_MaxTurningSpeed"]
-            agent.direction = wrap_direction(agent.direction)
-
-            angle = agent.direction * 2 * math.pi
-
-            agent.position[0] += math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
-            agent.position[1] += math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
-
-            agent.position = wrap_position(agent.position)
-
-            # NaturalDecay
-            agent.health -= configuration["Agent_NaturalDecay"]
-
-            # Die
-            if agent.health <= 0:
-                agents.remove(agent)
-            elif agent.health > 160:
-                agent.health /= 2
-                add_agent(agent)
+    for agent in agents:
+        if agent.health <= 0:
+            agents.remove(agent)
+        elif agent.health > 160:
+            agent.health /= 2
+            add_agent(agent)
 
     food_to_spawn += configuration["Food_PerTick"]
     while food_to_spawn >= 1:
         food_to_spawn -= 1
         add_food()
+
+
+def tick_agent(agent):
+    global agents
+
+    if tick_count-agent.birth == mark_agents_at_tick:
+        agent.marked = True
+
+    sensors = [configuration["Sensor_Food_Range"],
+               configuration["Sensor_Food_Range"],
+               configuration["Sensor_Food_Range"]]
+
+    # Food
+    for position in food_positions:
+        distance = agent.get_distance(position)
+        if distance < 0.5 + configuration["Food_Diameter"] / 2:
+            food_positions.remove(position)
+            agent.eat()
+        elif distance < configuration["Sensor_Food_Range"]:
+
+            sensors = calculate_sensors(agent, position, distance, sensors)
+
+    agent.sensors = sensors  # for agent.get_information_string
+
+    # Neural Network
+    agent.react(sensors)
+    output = agent.output
+
+    for i in range(0, len(output)):
+        output[i] = confine_number(2*output[i]-1, -1, 1)
+
+    # Movement
+    agent.direction_change = output[0] * configuration["Agent_MaxTurningSpeed"]
+
+    angle = agent.direction * 2 * math.pi
+
+    agent.position_change_x = math.sin(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+    agent.position_change_y = math.cos(angle) * output[1] * configuration["Agent_MaxMovementSpeed"]
+
+    # NaturalDecay
+    agent.health -= configuration["Agent_NaturalDecay"]
 
 
 def test_position(event):
@@ -214,10 +262,13 @@ def wrap_direction(direction):
 def start():
     global gui
     global agents
+    global thread_tick_tasks
 
     print("########Start########")
 
     gui = Gui(configuration)
+
+    gui.tkinter_root.protocol('WM_DELETE_WINDOW', quit_window)
 
     gui.tkinter_root.button_save.bind("<Button-1>", save)
     gui.tkinter_root.button_load.bind("<Button-1>", load)
@@ -238,6 +289,15 @@ def start():
     agents = []
     fill_to_min_population()
     gui.draw_frame(agents, food_positions, tick_count)
+
+    thread_tick_tasks = []
+
+    for i in range(0, number_of_threads):
+        thread_tick_tasks.append(None)
+
+        name = "thread "+str(i+1)+"/"+str(number_of_threads)
+        thread = TickThread(i, name)
+        thread.start()
 
     gui.tkinter_root.after(500, loop)
     gui.tkinter_root.mainloop()
@@ -318,6 +378,13 @@ def load(event):
 # noinspection PyUnusedLocal
 def jump(event):
     tick()
+
+
+def quit_window():
+    global exit_tasks
+
+    exit_tasks = True
+    gui.tkinter_root.destroy()
 
 
 start()

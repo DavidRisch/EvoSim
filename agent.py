@@ -5,6 +5,9 @@ from neuralnet import NeuralNet
 class Agent:
     position = []
     direction = None  # 0 to 1 clockwise, 0 is facing up
+    position_change_x = 0  # TODO: store as array (causes bug)
+    position_change_y = 0
+    direction_change = None
     health = None
     birth = None
     configuration = {}
@@ -16,7 +19,6 @@ class Agent:
     generation = 0
 
     def __init__(self, position, direction, tick_count, configuration, parent=None):
-        # print("NewAgent")
         self.position = position
         self.direction = direction
         self.health = configuration["Agent_Health"]
@@ -45,6 +47,7 @@ class Agent:
         string += "Position: [" + str(round(self.position[0], 2)) + ", " + str(round(self.position[1], 2)) + "]\n"
         string += "Health: " + str(round(self.health, 2)) + "\n"
         string += "Age: " + str(tick_count - self.birth) + "\n"
+        string += "Generation: " + str(self.generation) + "\n"
 
         return string
 

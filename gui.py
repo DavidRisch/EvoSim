@@ -35,7 +35,7 @@ class Gui:
         self.tkinter_root.button_jump.pack()
         self.tkinter_root.button_jump.place(x=140, y=5, width=100, height=30)
 
-        self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=1500, orient=HORIZONTAL)
+        self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=500, orient=HORIZONTAL)
         self.tkinter_root.speed_slider.pack()
         self.tkinter_root.speed_slider.place(x=(5+self.area_in_px - 405), y=5, width=400, height=65)
 
@@ -184,8 +184,6 @@ class Gui:
         self.tkinter_root.tree_view.heading('health', text='health')
         self.tkinter_root.tree_view.column('health', anchor='center', width=100)
 
-        self.tkinter_root.tree_view.insert('', 'end', text="", values=('10:00', '10:10', 'Ok'))
-
         self.tkinter_root.tree_view.pack()
         self.tkinter_root.tree_view.place(x=810, y=70, width=500, height=self.area_in_px)
 
@@ -204,7 +202,7 @@ class Gui:
         i = 0
         # highlighted = None
         for agent in agents:
-            generation = -1
+            generation = agent.generation
             age = round(tick_count - agent.birth, 2)
             health = round(agent.health, 2)
 
