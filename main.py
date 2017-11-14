@@ -13,7 +13,7 @@ configuration = {
     "Agent_MaxMovementSpeed": 0.1,
     "Agent_MaxTurningSpeed": 0.02,
     "Agent_NaturalDecay": 0.1,
-    "Agent_MinPopulation": 10,
+    "Agent_MinPopulation": 8,
     "Food_Value": 50,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.035,
@@ -56,7 +56,7 @@ class TickThread (threading.Thread):
         print("Starting " + self.name)
         while not exit_tasks:
             if thread_tick_tasks[self.thread_id] is not None:
-                for agent in thread_tick_tasks[self.thread_id]:
+                for agent in list(thread_tick_tasks[self.thread_id]):
                     if agent is not None:
                         tick_agent(agent)
 
@@ -151,7 +151,8 @@ def tick_agent(agent):
 
     # Food
     for position in food_positions:
-        distance = agent.get_distance(position)
+        # distance = agent.get_distance(position)
+        distance = agent.get_fast_distance(position)
         if distance < 0.5 + configuration["Food_Diameter"] / 2:
             food_positions.remove(position)
             agent.eat()

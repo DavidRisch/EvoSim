@@ -77,8 +77,7 @@ class Gui:
 
     def draw_agent(self, agent):
         image_index = round(agent.direction * 60)
-        if image_index == 60:
-            image_index = 0
+        image_index %= 60
         image = self.agent_images[image_index]
 
         center_x = agent.position[0] * self.one_unit_in_px
