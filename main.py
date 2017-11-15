@@ -107,7 +107,7 @@ def tick():
     size = math.floor(len(agents) / number_of_threads)
 
     for i in range(0, number_of_threads-1):
-        thread_tick_tasks[i] = agents[:(size*(i+1))]
+        thread_tick_tasks[i] = agents[size*i:(size*(i+1))]
 
     thread_tick_tasks[number_of_threads - 1] = agents[(size * (number_of_threads - 1)):]
 
