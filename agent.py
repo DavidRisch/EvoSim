@@ -1,5 +1,5 @@
 import math
-from neuralnet import NeuralNet
+from neuralnet import NeuralNetwork
 
 
 class Agent:
@@ -11,7 +11,7 @@ class Agent:
     health = None
     birth = None
     configuration = {}
-    neuralNet = None
+    neural_network = None
     sensors = []
     output = []
     highlighted = False
@@ -25,10 +25,10 @@ class Agent:
         self.birth = tick_count
         self.configuration = configuration
         if parent is None:
-            self.neuralNet = NeuralNet([3, 3, 2])
-            self.neuralNet.randomize_weights(-10, 10)
+            self.neural_network = NeuralNetwork(configuration["Neural_Network_Nodes_In_Layers"])
+            self.neural_network.randomize_weights(-10, 10)
         else:
-            self.neuralNet = parent.neuralNet
+            self.neural_network = parent.neural_network
             self.mutate()
             self.generation = parent.generation + 1
 
@@ -64,7 +64,7 @@ class Agent:
         return string
 
     def react(self, sensors):
-        self.output = self.neuralNet.feed(sensors)
+        self.output = self.neural_network.feed(sensors)
 
     def mutate(self):
-        self.neuralNet.mutate(0.1)
+        self.neural_network.mutate_absolute(self.configuration["Neural_Network_Mutate"])

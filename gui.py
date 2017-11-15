@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter.ttk import *
+from tkinter import filedialog
 import tkinter
+import os
 from PIL import Image                # pip install pillow
 from PIL import ImageTk              # pip install pillow
 
@@ -214,3 +216,10 @@ class Gui:
 
         # if highlighted is not None:
         #   self.tkinter_root.tree_view.selection_set(self.tkinter_root.tree_view.tag_has(highlighted)[0])
+
+    def open_file_dialog(self):
+        path = os.getcwd() + "\saves"
+        print(path)
+        file_name = filedialog.askopenfilename(initialdir=path, title="Select file",
+                                               filetypes=(("EvoSim saves", "*.EvoSim"), ("all files", "*.*")))
+        return file_name
