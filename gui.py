@@ -1,11 +1,17 @@
+import saveload
+
 from tkinter import *
 from tkinter.ttk import *
+from tkinter import filedialog
 import tkinter
+import os
 from PIL import Image                # pip install pillow
 from PIL import ImageTk              # pip install pillow
 
 
 class Gui:
+    manager = None
+
     configuration = {}
     area_in_px = 800
     tkinter_root = None
@@ -13,6 +19,7 @@ class Gui:
     one_unit_in_px = 0
     agent_images = []
     images = {}
+    speed_before_pause = 20
 
     def __init__(self, configuration):
         self.configuration = configuration
@@ -61,18 +68,35 @@ class Gui:
         self.prepare_canvas()
         self.create_table()
 
-    def draw_frame(self, agents, food_positions, tick_count):
+    def bind_buttons(self, manager):
+        self.manager = manager
+
+        self.tkinter_root.protocol('WM_DELETE_WINDOW', self.quit_window)
+
+        self.tkinter_root.button_save.bind("<Button-1>", self.save)
+        self.tkinter_root.button_load.bind("<Button-1>", self.load)
+        self.tkinter_root.button_jump.bind("<Button-1>", self.jump)
+        self.tkinter_root.bind("y", self.jump)
+        self.tkinter_root.speed_slider.bind("<B1-Motion>", self.set_speed)
+        self.tkinter_root.speed_slider.bind("<Button-1>", self.set_speed)
+        self.tkinter_root.speed_slider.bind("<ButtonRelease-1>", self.set_speed)
+
+        self.tkinter_root.canvas.bind("<Button-1>", self.click_on_canvas)
+        self.tkinter_root.bind("<space>", self.toggle_pause)
+        self.tkinter_root.tree_view.bind("<<TreeviewSelect>>", self.select_table)
+
+    def draw_frame(self):
         self.tkinter_root.canvas.delete("all")
-        for agent in agents:
+        for agent in self.manager.agents:
             self.draw_agent(agent)
             if agent.highlighted:
-                self.tkinter_root.agent_information_text.set(agent.get_information_string(tick_count))
+                self.tkinter_root.agent_information_text.set(agent.get_information_string(self.manager.tick_count))
 
-        for position in food_positions:
+        for position in self.manager.food_positions:
             self.draw_food(position)
 
-        string = "Tick: " + str(tick_count) + "\n"
-        string += "Agents: " + str(len(agents)) + " / " + str(self.configuration["Agent_MinPopulation"])
+        string = "Tick: " + str(self.manager.tick_count) + "\n"
+        string += "Agents: " + str(len(self.manager.agents)) + " / " + str(self.configuration["Agent_MinPopulation"])
         self.tkinter_root.general_information_text.set(string)
 
     def draw_agent(self, agent):
@@ -80,39 +104,68 @@ class Gui:
         image_index %= 60
         image = self.agent_images[image_index]
 
-        center_x = agent.position[0] * self.one_unit_in_px
-        center_y = self.area_in_px - agent.position[1] * self.one_unit_in_px
+        center_position = [agent.position[0] * self.one_unit_in_px,
+                           self.area_in_px - agent.position[1] * self.one_unit_in_px]
 
-        self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=image)
+        self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER, image=image)
 
         if agent.highlighted:
-            self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Highlight"])
+            self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER,
+                                                  image=self.images["Highlight"])
 
             angle = 360 * agent.direction
             angle = -angle + 90
-            sensor_middle_angle = self.configuration["Sensor_Food_Middle_Angel"]
-            sensor_side_angle = self.configuration["Sensor_Food_Side_Angel"]
 
-            sensor_range = self.configuration["Sensor_Food_Range"] * self.one_unit_in_px
+            self.draw_agent_arcs(center_position, angle)
 
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+        if agent.marked:
+            self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER,
+                                                  image=self.images["Marker"])
+
+    def draw_agent_arcs(self, center_position, angle):
+        colors = {"Food": "#ffde00",
+                  "Agent": "#4eff00",
+                  "Attack": "#a80000"}
+
+        for sensor_type in ["Food", "Agent"]:
+            sensor_middle_angle = self.configuration["Sensor_"+sensor_type+"_Middle_Angel"]
+            sensor_side_angle = self.configuration["Sensor_"+sensor_type+"_Side_Angel"]
+            sensor_range = self.configuration["Sensor_"+sensor_type+"_Range"] * self.one_unit_in_px
+            color = colors[sensor_type]
+
+            x1 = center_position[0] - sensor_range
+            x2 = center_position[0] + sensor_range
+            y1 = center_position[1] - sensor_range
+            y2 = center_position[1] + sensor_range
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle + sensor_middle_angle / 2 + sensor_side_angle,
                                                 extent=-sensor_side_angle)
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle - sensor_middle_angle / 2,
                                                 extent=sensor_middle_angle)
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle - sensor_middle_angle / 2 - sensor_side_angle,
                                                 extent=sensor_side_angle)
 
-        if agent.marked:
-            self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Marker"])
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
+                                                start=angle + sensor_middle_angle / 2 + sensor_side_angle,
+                                                extent=(360 - 2*sensor_side_angle - sensor_middle_angle))
+
+        attack_angle = self.configuration["Agent_Attack_Angle"]
+        attack_range = self.configuration["Agent_Attack_Range"] * self.one_unit_in_px
+        color = colors["Attack"]
+
+        x1 = center_position[0] - attack_range
+        x2 = center_position[0] + attack_range
+        y1 = center_position[1] - attack_range
+        y2 = center_position[1] + attack_range
+
+        self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
+                                            start=angle - attack_angle / 2,
+                                            extent=attack_angle)
 
     def draw_food(self, position):
         self.tkinter_root.canvas.create_image(position[0] * self.one_unit_in_px,
@@ -152,7 +205,7 @@ class Gui:
         image = image.resize((size, size), Image.ANTIALIAS)
         self.images["Marker"] = ImageTk.PhotoImage(image)
 
-    def click_on_canvas(self, event, agents):
+    def click_on_canvas(self, event):
         position = [event.x, self.area_in_px - event.y]
         for i in [0, 1]:
             position[i] = position[i] / self.one_unit_in_px
@@ -160,10 +213,10 @@ class Gui:
         closest_distance = 9999999999
         closest_agent = None
 
-        for agent in agents:
+        for agent in self.manager.agents:
             agent.highlighted = False
 
-            distance = agent.get_distance(position)
+            distance = agent.get_distance(position, self.configuration["Area"])
             if distance < closest_distance:
                 closest_distance = distance
                 closest_agent = agent
@@ -186,23 +239,24 @@ class Gui:
         self.tkinter_root.tree_view.pack()
         self.tkinter_root.tree_view.place(x=810, y=70, width=500, height=self.area_in_px)
 
-    def select_table(self, agents):
+    # noinspection PyUnusedLocal
+    def select_table(self, event):
         item = self.tkinter_root.tree_view.item(self.tkinter_root.tree_view.focus())
         i = int(item["text"])
 
-        for agent in agents:
+        for agent in self.manager.agents:
             agent.highlighted = False
 
-        agents[i].highlighted = True
+            self.manager.agents[i].highlighted = True
 
-    def update_table(self, agents, tick_count):
+    def update_table(self):
         self.tkinter_root.tree_view.delete(*self.tkinter_root.tree_view.get_children())
 
         i = 0
         # highlighted = None
-        for agent in agents:
+        for agent in self.manager.agents:
             generation = agent.generation
-            age = round(tick_count - agent.birth, 2)
+            age = round(self.manager.tick_count - agent.birth, 2)
             health = round(agent.health, 2)
 
             self.tkinter_root.tree_view.insert('', 'end', text=i, values=(generation, age, health), tag=i)
@@ -214,3 +268,43 @@ class Gui:
 
         # if highlighted is not None:
         #   self.tkinter_root.tree_view.selection_set(self.tkinter_root.tree_view.tag_has(highlighted)[0])
+
+    def open_file_dialog(self):
+        self.manager.speed = 0
+        path = os.getcwd() + "\saves"
+        print(path)
+        file_name = filedialog.askopenfilename(initialdir=path, title="Select file",
+                                               filetypes=(("EvoSim saves", "*.EvoSim"), ("all files", "*.*")))
+        return file_name
+
+    # noinspection PyUnusedLocal
+    def toggle_pause(self, event):
+        if self.manager.speed != 0:
+            self.speed_before_pause = self.manager.speed
+            self.manager.speed = 0
+            self.draw_frame()
+            self.update_table()
+        else:
+            self.manager.speed = self.speed_before_pause
+
+        self.tkinter_root.speed_slider.set(self.manager.speed)
+
+    # noinspection PyUnusedLocal
+    def set_speed(self, event):
+        self.manager.speed = int(self.tkinter_root.speed_slider.get())
+
+    # noinspection PyUnusedLocal
+    def save(self, event):
+        saveload.save(self.manager)
+
+    # noinspection PyUnusedLocal
+    def load(self, event):
+        saveload.load(self.manager)
+
+    # noinspection PyUnusedLocal
+    def jump(self, event):
+        self.manager.tick()
+
+    def quit_window(self):
+        self.manager.exit_tasks = True
+        self.tkinter_root.destroy()
