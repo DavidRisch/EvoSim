@@ -103,10 +103,14 @@ class Manager:
 
         for agent in self.agents:
             if agent.health <= 0:
+                if agent.last_attacked_by is not None:
+                    agent.last_attacked_by.health += self.configuration["Agent_Attack_Gain"]
                 self.agents.remove(agent)
             elif agent.health >= self.configuration["Agent_Reproduce_At"]:
                 agent.health -= self.configuration["Agent_Reproduce_Cost"]
                 self.add_agent(agent)
+
+            agent.last_attacked_by = None
 
         self.food_to_spawn += self.configuration["Food_PerTick"]
         while self.food_to_spawn >= 1:
@@ -117,24 +121,45 @@ class Manager:
         if self.tick_count - agent.birth == self.mark_agents_at_tick:
             agent.marked = True
 
-        sensors = [self.configuration["Sensor_Food_Range"],
-                   self.configuration["Sensor_Food_Range"],
-                   self.configuration["Sensor_Food_Range"]]
+        sensors = [
+            self.configuration["Sensor_Food_Range"],
+            self.configuration["Sensor_Food_Range"],
+            self.configuration["Sensor_Food_Range"],
+            self.configuration["Sensor_Food_Range"],
+            self.configuration["Sensor_Agent_Range"],
+            self.configuration["Sensor_Agent_Range"],
+            self.configuration["Sensor_Agent_Range"],
+            self.configuration["Sensor_Agent_Range"],
+            agent.health / self.configuration["Agent_Health"],
+        ]
 
         # Food
         for food_position in self.food_positions:
-            # distance = agent.get_distance(position)
-            distance = agent.get_fast_distance(food_position)
+            distance = agent.get_distance(food_position, self.configuration["Sensor_Food_Range"])
             if distance < 0.5 + self.configuration["Food_Diameter"] / 2:
                 self.food_positions.remove(food_position)
                 agent.eat()
             elif distance < self.configuration["Sensor_Food_Range"]:
+                sensors = methods.calculate_sensors(agent, food_position, None, distance,
+                                                    sensors, self.configuration)
 
-                sensors = methods.calculate_sensors(agent, food_position, distance, sensors, self.configuration)
+        for other_agent in self.agents:
+            if other_agent != agent:
+                distance = agent.get_distance(other_agent.position, self.configuration["Sensor_Agent_Range"])
+                if distance < self.configuration["Sensor_Agent_Range"]:
+                    sensors = methods.calculate_sensors(agent, None, other_agent.position, distance,
+                                                        sensors, self.configuration)
 
         agent.sensors = sensors  # for agent.get_information_string
 
         # Neural Network
+
+        # Sensors: [Food_Left, Food_Middle, Food_Right, Food_Rest
+        #           Agent_Left, Agent_Middle, Agent_Right, Agent_Rest
+        #           health,]
+
+        # Output:  [Rotation, Movement, Attack]
+
         agent.react(sensors)
         output = agent.output
 
@@ -149,6 +174,10 @@ class Manager:
         agent.position_change_x = math.sin(angle) * output[1] * self.configuration["Agent_Movement_MaxSpeed"]
         agent.position_change_y = math.cos(angle) * output[1] * self.configuration["Agent_Movement_MaxSpeed"]
         agent.health -= math.fabs(output[1]) * self.configuration["Agent_Movement_Cost"]
+
+        # Attack
+        if output[2] > 0:
+            agent.perform_attack(self.agents)
 
         # NaturalDecay
         agent.health -= self.configuration["Agent_NaturalDecay"]

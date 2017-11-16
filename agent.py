@@ -3,6 +3,7 @@ from neuralnet import NeuralNetwork
 
 from copy import deepcopy
 
+
 class Agent:
     position = []
     direction = None  # 0 to 1 clockwise, 0 is facing up
@@ -18,6 +19,7 @@ class Agent:
     highlighted = False
     marked = False
     generation = 0
+    last_attacked_by = None
 
     def __init__(self, position, direction, tick_count, configuration, parent=None):
         self.position = position
@@ -36,23 +38,29 @@ class Agent:
     def eat(self):
         self.health += self.configuration["Food_Value"]
 
-    def get_distance(self, position):
+    def perform_attack(self, agents):
+        self.health -= self.configuration["Agent_Attack_Cost"]
+
+        for agent in agents:
+            if agent != self:
+                distance = self.get_distance(agent.position, self.configuration["Agent_Attack_Range"])
+                if distance < self.configuration["Agent_Attack_Range"]:
+                    agent.get_attacked(self)
+
+    def get_attacked(self, other_agent):
+        self.health -= self.configuration["Agent_Attack_Damage"]
+
+        self.last_attacked_by = other_agent
+
+    def get_distance(self, position, max_range):
         distance_x = self.position[0] - position[0]
         distance_y = self.position[1] - position[1]
-        distance = math.sqrt(math.pow(distance_x, 2) + math.pow(distance_y, 2))
-        return distance
 
-    # fast algorithm, assuming the exact distance is only from importance, if
-    # it is within the Sensor_Food_Range.
-    # for correct measurement use get_distance()
-    def get_fast_distance(self, position):
-        dx = self.position[0] - position[0]
-        dy = self.position[1] - position[1]
-        food_range = self.configuration["Sensor_Food_Range"]
-        if 2*abs(dx) <= food_range and 2*abs(dy) <= food_range:
-            return math.sqrt(dx ** 2 + dy ** 2)
+        if abs(distance_x) <= max_range and abs(distance_y) <= max_range:
+            distance = math.sqrt(math.pow(distance_x, 2) + math.pow(distance_y, 2))
+            return distance
         else:
-            return food_range + 1
+            return 999999
 
     def get_information_string(self, tick_count):
         string = "Sensors: [" + ", ".join(str(e) for e in self.sensors) + "]\n"

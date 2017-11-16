@@ -104,39 +104,68 @@ class Gui:
         image_index %= 60
         image = self.agent_images[image_index]
 
-        center_x = agent.position[0] * self.one_unit_in_px
-        center_y = self.area_in_px - agent.position[1] * self.one_unit_in_px
+        center_position = [agent.position[0] * self.one_unit_in_px,
+                           self.area_in_px - agent.position[1] * self.one_unit_in_px]
 
-        self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=image)
+        self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER, image=image)
 
         if agent.highlighted:
-            self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Highlight"])
+            self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER,
+                                                  image=self.images["Highlight"])
 
             angle = 360 * agent.direction
             angle = -angle + 90
-            sensor_middle_angle = self.configuration["Sensor_Food_Middle_Angel"]
-            sensor_side_angle = self.configuration["Sensor_Food_Side_Angel"]
 
-            sensor_range = self.configuration["Sensor_Food_Range"] * self.one_unit_in_px
+            self.draw_agent_arcs(center_position, angle)
 
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+        if agent.marked:
+            self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER,
+                                                  image=self.images["Marker"])
+
+    def draw_agent_arcs(self, center_position, angle):
+        colors = {"Food": "#ffde00",
+                  "Agent": "#4eff00",
+                  "Attack": "#a80000"}
+
+        for sensor_type in ["Food", "Agent"]:
+            sensor_middle_angle = self.configuration["Sensor_"+sensor_type+"_Middle_Angel"]
+            sensor_side_angle = self.configuration["Sensor_"+sensor_type+"_Side_Angel"]
+            sensor_range = self.configuration["Sensor_"+sensor_type+"_Range"] * self.one_unit_in_px
+            color = colors[sensor_type]
+
+            x1 = center_position[0] - sensor_range
+            x2 = center_position[0] + sensor_range
+            y1 = center_position[1] - sensor_range
+            y2 = center_position[1] + sensor_range
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle + sensor_middle_angle / 2 + sensor_side_angle,
                                                 extent=-sensor_side_angle)
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle - sensor_middle_angle / 2,
                                                 extent=sensor_middle_angle)
-            self.tkinter_root.canvas.create_arc(center_x - sensor_range, center_y - sensor_range,
-                                                center_x + sensor_range, center_y + sensor_range,
-                                                outline="#999",
+
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
                                                 start=angle - sensor_middle_angle / 2 - sensor_side_angle,
                                                 extent=sensor_side_angle)
 
-        if agent.marked:
-            self.tkinter_root.canvas.create_image(center_x, center_y, anchor=CENTER, image=self.images["Marker"])
+            self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
+                                                start=angle + sensor_middle_angle / 2 + sensor_side_angle,
+                                                extent=(360 - 2*sensor_side_angle - sensor_middle_angle))
+
+        attack_angle = self.configuration["Agent_Attack_Angle"]
+        attack_range = self.configuration["Agent_Attack_Range"] * self.one_unit_in_px
+        color = colors["Attack"]
+
+        x1 = center_position[0] - attack_range
+        x2 = center_position[0] + attack_range
+        y1 = center_position[1] - attack_range
+        y2 = center_position[1] + attack_range
+
+        self.tkinter_root.canvas.create_arc(x1, y1, x2, y2, outline=color,
+                                            start=angle - attack_angle / 2,
+                                            extent=attack_angle)
 
     def draw_food(self, position):
         self.tkinter_root.canvas.create_image(position[0] * self.one_unit_in_px,
@@ -187,7 +216,7 @@ class Gui:
         for agent in self.manager.agents:
             agent.highlighted = False
 
-            distance = agent.get_distance(position)
+            distance = agent.get_distance(position, self.configuration["Area"])
             if distance < closest_distance:
                 closest_distance = distance
                 closest_agent = agent
