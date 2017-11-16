@@ -47,7 +47,7 @@ def test_position(event):
     # print(calculate_sensors(agents[0], food_position, distance, [0, 0, 0]))
 
 
-def start():
+def main():
     global gui
     global manager
 
@@ -62,4 +62,5 @@ def start():
     gui.tkinter_root.mainloop()
 
 
-start()
+if __name__ == "__main__":
+    main()
