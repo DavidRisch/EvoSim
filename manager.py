@@ -22,7 +22,7 @@ class Manager:
     speed = 20  # ticks/second
     speed_before_pause = 0
     wait_ever_x_ticks = 25  # prevent program from freezing
-    number_of_threads = 4
+    number_of_threads = 8
 
     mark_agents_at_tick = 2000
 
@@ -34,11 +34,12 @@ class Manager:
     def __init__(self, configuration, gui):
         self.configuration = configuration
         self.gui = gui
+        self.gui.bind_buttons(self)
 
         gui.tkinter_root.speed_slider.set(self.speed)
 
         self.fill_to_min_population()
-        gui.draw_frame(self.agents, self.food_positions, self.tick_count)
+        gui.draw_frame()
 
         self.thread_tick_tasks = []
 
@@ -61,11 +62,11 @@ class Manager:
 
         if current_ms >= self.last_frame_ms + round((1 / self.fps) * 1000):
             self.last_frame_ms = current_ms
-            self.gui.draw_frame(self.agents, self.food_positions, self.tick_count)
+            self.gui.draw_frame()
 
         if current_ms >= self.last_table_frame_ms + round((1 / self.fps_table) * 1000):
             self.last_table_frame_ms = current_ms
-            self.gui.update_table(self.agents, self.tick_count)
+            self.gui.update_table()
 
         if self.speed != 0:
             time_to_next_tick = round((1 / self.speed) * 1000 - (current_ms - start_ms))
@@ -82,12 +83,8 @@ class Manager:
 
         self.fill_to_min_population()
 
-        size = math.floor(len(self.agents) / self.number_of_threads)
-
-        for i in range(0, self.number_of_threads - 1):
-            self.thread_tick_tasks[i] = self.agents[:(size * (i + 1))]
-
-            self.thread_tick_tasks[self.number_of_threads - 1] = self.agents[(size * (self.number_of_threads - 1)):]
+        for i in range(0, self.number_of_threads):
+            self.thread_tick_tasks[i] = self.agents[i::self.number_of_threads]
 
         tasks_complete = False
         while not tasks_complete:
@@ -145,12 +142,13 @@ class Manager:
             output[i] = methods.confine_number(2 * output[i] - 1, -1, 1)
 
         # Movement
-        agent.direction_change = output[0] * self.configuration["Agent_MaxTurningSpeed"]
+        agent.direction_change = output[0] * self.configuration["Agent_Turning_MaxSpeed"]
 
         angle = agent.direction * 2 * math.pi
 
-        agent.position_change_x = math.sin(angle) * output[1] * self.configuration["Agent_MaxMovementSpeed"]
-        agent.position_change_y = math.cos(angle) * output[1] * self.configuration["Agent_MaxMovementSpeed"]
+        agent.position_change_x = math.sin(angle) * output[1] * self.configuration["Agent_Movement_MaxSpeed"]
+        agent.position_change_y = math.cos(angle) * output[1] * self.configuration["Agent_Movement_MaxSpeed"]
+        agent.health -= math.fabs(output[1]) * self.configuration["Agent_Movement_Cost"]
 
         # NaturalDecay
         agent.health -= self.configuration["Agent_NaturalDecay"]

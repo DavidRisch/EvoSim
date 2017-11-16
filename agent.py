@@ -1,6 +1,7 @@
 import math
 from neuralnet import NeuralNetwork
 
+from copy import deepcopy
 
 class Agent:
     position = []
@@ -28,7 +29,7 @@ class Agent:
             self.neural_network = NeuralNetwork(configuration["Neural_Network_Nodes_In_Layers"])
             self.neural_network.randomize_weights(-10, 10)
         else:
-            self.neural_network = parent.neural_network
+            self.neural_network = deepcopy(parent.neural_network)
             self.mutate()
             self.generation = parent.generation + 1
 
