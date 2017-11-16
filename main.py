@@ -26,7 +26,7 @@ configuration = {
     "Sensor_Agent_Range": 12,
     "Sensor_Agent_Middle_Angel": 30,
     "Sensor_Agent_Side_Angel": 30,
-    "Neural_Network_Nodes_In_Layers": [7, 5, 3],
+    "Neural_Network_Nodes_In_Layers": [9, 6, 6, 3],
     "Neural_Network_Mutate": 0.1,
 }
 
