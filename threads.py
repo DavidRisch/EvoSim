@@ -14,14 +14,20 @@ class TickThread (threading.Thread):
     def run(self):
         print("Starting " + self.name)
         while not self.manager.exit_tasks:
-            if self.manager.thread_tick_tasks[self.thread_id] is not None:
-                for agent in list(self.manager.thread_tick_tasks[self.thread_id]):
-                    if agent is not None:
-                        self.manager.tick_agent(agent)
+            if self.manager.thread_tick_tasks_stage[self.thread_id] == 1:
+                for agent in self.manager.thread_tick_tasks[self.thread_id]:
+                    self.manager.tick_agent_part_a(agent)
 
-                        self.manager.thread_tick_tasks[self.thread_id] = None
+                self.manager.thread_tick_tasks_stage[self.thread_id] = 2
+            elif self.manager.thread_tick_tasks_stage[self.thread_id] == 3:
+                for agent in self.manager.thread_tick_tasks[self.thread_id]:
+                    self.manager.tick_agent_part_b(agent)
 
-            time.sleep(0.0001)  # 0.1ms
+                    self.manager.thread_tick_tasks[self.thread_id] = None
+
+                self.manager.thread_tick_tasks_stage[self.thread_id] = 4
+
+            time.sleep(0.00005)  # 0.05ms
         print("Exiting " + self.name)
 
 

@@ -34,6 +34,7 @@ class Manager:
     mark_agents_at_tick = 2000
 
     thread_tick_tasks = []
+    thread_tick_tasks_stage = [0 for i in range(0, number_of_threads)]
     exit_tasks = False
     frame_information = FrameInformation()
 
@@ -86,38 +87,18 @@ class Manager:
         for i in range(0, self.number_of_threads):
             self.thread_tick_tasks[i] = self.agents[i::self.number_of_threads]
 
-        tasks_complete = False
-        while not tasks_complete:
-            time.sleep(0.0001)  # 0.1ms
-            tasks_complete = True
-            for tick_tasks in self.thread_tick_tasks:
-                if tick_tasks is not None:
-                    tasks_complete = False
-
-        for agent in self.agents:
-            agent.direction += agent.direction_change
-            agent.direction = methods.wrap_direction(agent.direction)
-            agent.position[0] += agent.position_change_x
-            agent.position[1] += agent.position_change_y
-            agent.position = methods.wrap_position(agent.position, self.configuration)
-
-        for agent in self.agents:
-            if agent.health <= 0:
-                if agent.last_attacked_by is not None:
-                    agent.last_attacked_by.health += self.configuration["Agent_Attack_Gain"]
-                self.agents.remove(agent)
-            elif agent.health >= self.configuration["Agent_Reproduce_At"]:
-                agent.health -= self.configuration["Agent_Reproduce_Cost"]
-                self.add_agent(agent)
-
-            agent.last_attacked_by = None
+        self.thread_tick_tasks_stage = [1 for i in range(0, self.number_of_threads)]
+        self.wait_for_tick_thread_progress(2)
+        self.thread_tick_tasks_stage = [3 for i in range(0, self.number_of_threads)]
+        self.wait_for_tick_thread_progress(4)
+        self.thread_tick_tasks_stage = [0 for i in range(0, self.number_of_threads)]
 
         self.food_to_spawn += self.configuration["Food_PerTick"]
         while self.food_to_spawn >= 1:
             self.food_to_spawn -= 1
             self.add_food()
 
-    def tick_agent(self, agent):
+    def tick_agent_part_a(self, agent):
         if self.tick_count - agent.birth == self.mark_agents_at_tick:
             agent.marked = True
 
@@ -182,11 +163,37 @@ class Manager:
         # NaturalDecay
         agent.health -= self.configuration["Agent_NaturalDecay"]
 
+    def tick_agent_part_b(self, agent):
+        agent.direction += agent.direction_change
+        agent.direction = methods.wrap_direction(agent.direction)
+        agent.position[0] += agent.position_change_x
+        agent.position[1] += agent.position_change_y
+        agent.position = methods.wrap_position(agent.position, self.configuration)
+
+        if agent.health <= 0:
+            if agent.last_attacked_by is not None:
+                agent.last_attacked_by.health += self.configuration["Agent_Attack_Gain"]
+            self.agents.remove(agent)
+        elif agent.health >= self.configuration["Agent_Reproduce_At"]:
+            agent.health -= self.configuration["Agent_Reproduce_Cost"]
+            self.add_agent(agent)
+
+        agent.last_attacked_by = None
+
     def set_frame_information(self):
         self.frame_information.agents = copy(self.agents)
         self.frame_information.food_positions = copy(self.food_positions)
         self.frame_information.tick_count = self.tick_count
         self.frame_information.has_been_used = False
+
+    def wait_for_tick_thread_progress(self, progress):
+        tasks_complete = False
+        while not tasks_complete:
+            time.sleep(0.00005)  # 0.05ms
+            tasks_complete = True
+            for thread_tick_tasks_progress in self.thread_tick_tasks_stage:
+                if thread_tick_tasks_progress != progress:
+                    tasks_complete = False
 
     def fill_to_min_population(self):
         while len(self.agents) < self.configuration["Agent_MinPopulation"]:

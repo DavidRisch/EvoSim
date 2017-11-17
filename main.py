@@ -1,4 +1,3 @@
-from gui import Gui
 from manager import Manager
 from threads import GuiThread
 
