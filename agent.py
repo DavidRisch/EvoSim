@@ -2,8 +2,10 @@ import math
 from copy import deepcopy
 from neuralnet import NeuralNetwork
 
+import random
 
 class Agent:
+    id = None
     position = []
     direction = None  # 0 to 1 clockwise, 0 is facing up
     position_change_x = 0  # TODO: store as array (causes bug)
@@ -15,12 +17,13 @@ class Agent:
     neural_network = None
     sensors = []
     output = []
-    highlighted = False
     marked = False
     generation = 0
     last_attacked_by = None
 
     def __init__(self, position, direction, tick_count, configuration, parent=None):
+        self.id = random.getrandbits(32)
+
         self.position = position
         self.direction = direction
         self.health = configuration["Agent_Health"]

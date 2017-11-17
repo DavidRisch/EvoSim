@@ -21,6 +21,9 @@ class Gui:
     images = {}
     speed_before_pause = 20
 
+    frame_information = None
+    highlighted_agent_id = None
+
     def __init__(self, configuration):
         self.configuration = configuration
 
@@ -68,9 +71,7 @@ class Gui:
         self.prepare_canvas()
         self.create_table()
 
-    def bind_buttons(self, manager):
-        self.manager = manager
-
+    def bind_buttons(self):
         self.tkinter_root.protocol('WM_DELETE_WINDOW', self.quit_window)
 
         self.tkinter_root.button_save.bind("<Button-1>", self.save)
@@ -87,17 +88,21 @@ class Gui:
 
     def draw_frame(self):
         self.tkinter_root.canvas.delete("all")
-        for agent in self.manager.agents:
+        for agent in self.frame_information.agents:
             self.draw_agent(agent)
-            if agent.highlighted:
-                self.tkinter_root.agent_information_text.set(agent.get_information_string(self.manager.tick_count))
+            if agent.id == self.highlighted_agent_id:
+                self.tkinter_root.agent_information_text.set(
+                    agent.get_information_string(self.frame_information.tick_count))
 
-        for position in self.manager.food_positions:
+        for position in self.frame_information.food_positions:
             self.draw_food(position)
 
-        string = "Tick: " + str(self.manager.tick_count) + "\n"
-        string += "Agents: " + str(len(self.manager.agents)) + " / " + str(self.configuration["Agent_MinPopulation"])
+        string = "Tick: " + str(self.frame_information.tick_count) + "\n"
+        string += "Agents: " + str(len(self.frame_information.agents)) \
+                  + " / " + str(self.configuration["Agent_MinPopulation"])
         self.tkinter_root.general_information_text.set(string)
+
+        self.update_table()
 
     def draw_agent(self, agent):
         image_index = round(agent.direction * 60)
@@ -109,7 +114,7 @@ class Gui:
 
         self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER, image=image)
 
-        if agent.highlighted:
+        if agent.id == self.highlighted_agent_id:
             self.tkinter_root.canvas.create_image(center_position[0], center_position[1], anchor=CENTER,
                                                   image=self.images["Highlight"])
 
@@ -213,15 +218,13 @@ class Gui:
         closest_distance = 9999999999
         closest_agent = None
 
-        for agent in self.manager.agents:
-            agent.highlighted = False
-
+        for agent in self.frame_information.agents:
             distance = agent.get_distance(position, self.configuration["Area"])
             if distance < closest_distance:
                 closest_distance = distance
                 closest_agent = agent
 
-        closest_agent.highlighted = True
+        self.highlighted_agent_id = closest_agent.id
 
     def create_table(self):
         self.tkinter_root.tree_view = Treeview(self.tkinter_root)
@@ -244,19 +247,16 @@ class Gui:
         item = self.tkinter_root.tree_view.item(self.tkinter_root.tree_view.focus())
         i = int(item["text"])
 
-        for agent in self.manager.agents:
-            agent.highlighted = False
-
-            self.manager.agents[i].highlighted = True
+        self.highlighted_agent_id = self.frame_information.agents[i].id
 
     def update_table(self):
         self.tkinter_root.tree_view.delete(*self.tkinter_root.tree_view.get_children())
 
         i = 0
         # highlighted = None
-        for agent in self.manager.agents:
+        for agent in self.frame_information.agents:
             generation = agent.generation
-            age = round(self.manager.tick_count - agent.birth, 2)
+            age = round(self.frame_information.tick_count - agent.birth, 2)
             health = round(agent.health, 2)
 
             self.tkinter_root.tree_view.insert('', 'end', text=i, values=(generation, age, health), tag=i)

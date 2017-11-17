@@ -1,5 +1,6 @@
 from gui import Gui
 from manager import Manager
+from threads import GuiThread
 
 
 configuration = {
@@ -31,7 +32,6 @@ configuration = {
 }
 
 
-gui = None
 manager = None
 
 
@@ -48,18 +48,17 @@ def test_position(event):
 
 
 def main():
-    global gui
     global manager
 
     print("########Start########")
 
-    gui = Gui(configuration)
-    manager = Manager(configuration, gui)
-    gui.bind_buttons(manager)
+    manager = Manager(configuration)
+    gui_thread = GuiThread(manager)
+    gui_thread.start()
+
+    manager.loop()
 
     # gui.tkinter_root.canvas.bind("<Button-1>", test_position)
-
-    gui.tkinter_root.mainloop()
 
 
 if __name__ == "__main__":

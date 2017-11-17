@@ -1,10 +1,19 @@
 import methods
 from agent import Agent
+from threads import TickThread
 
 import time
 import math
 import random
-import threading
+from copy import copy
+
+
+class FrameInformation:
+    has_been_used = True
+    is_being_used = False
+    agents = []
+    food_positions = []
+    tick_count = 0
 
 
 class Manager:
@@ -16,30 +25,23 @@ class Manager:
     # keeps track of food, that needs to be spawned (because configuration["Food_PerTick"] is not an int)
 
     fps = 20
-    fps_table = 5
     last_frame_ms = 0
-    last_table_frame_ms = 0
     speed = 20  # ticks/second
     speed_before_pause = 0
-    wait_ever_x_ticks = 25  # prevent program from freezing
+    # wait_ever_x_ticks = 25  # prevent program from freezing
     number_of_threads = 8
 
     mark_agents_at_tick = 2000
 
     thread_tick_tasks = []
     exit_tasks = False
+    frame_information = FrameInformation()
 
-    gui = None
-
-    def __init__(self, configuration, gui):
+    def __init__(self, configuration):
         self.configuration = configuration
-        self.gui = gui
-        self.gui.bind_buttons(self)
-
-        gui.tkinter_root.speed_slider.set(self.speed)
 
         self.fill_to_min_population()
-        gui.draw_frame()
+        self.set_frame_information()
 
         self.thread_tick_tasks = []
 
@@ -50,33 +52,31 @@ class Manager:
             thread = TickThread(self, i, name)
             thread.start()
 
-        gui.tkinter_root.after(500, self.loop)
-
     def loop(self):
-        start_ms = time.time() * 1000.0
+        while True:
+            start_ms = time.time() * 1000.0
 
-        if self.speed != 0:
-            self.tick()
+            if self.speed != 0:
+                self.tick()
 
-        current_ms = time.time() * 1000.0
+            current_ms = time.time() * 1000.0
 
-        if current_ms >= self.last_frame_ms + round((1 / self.fps) * 1000):
-            self.last_frame_ms = current_ms
-            self.gui.draw_frame()
+            if current_ms >= self.last_frame_ms + round((1 / self.fps) * 1000):
+                if not self.frame_information.is_being_used:
+                    self.last_frame_ms = current_ms
+                    self.set_frame_information()
 
-        if current_ms >= self.last_table_frame_ms + round((1 / self.fps_table) * 1000):
-            self.last_table_frame_ms = current_ms
-            self.gui.update_table()
+            # print("tick: "+str(current_ms - start_ms))
 
-        if self.speed != 0:
-            time_to_next_tick = round((1 / self.speed) * 1000 - (current_ms - start_ms))
-        else:
-            time_to_next_tick = round((1 / 20) * 1000)  # 25fps
+            if self.speed != 0:
+                time_to_next_loop = (1 / self.speed) * 1000 - (current_ms - start_ms)
+            else:
+                time_to_next_loop = (1 / 20) * 1000  # 20fps
 
-        if time_to_next_tick <= 1 and self.tick_count % self.wait_ever_x_ticks == 0:
-            time_to_next_tick = 1
+            if time_to_next_loop < 0:
+                time_to_next_loop = 0
 
-        self.gui.tkinter_root.after(time_to_next_tick, self.loop)
+            time.sleep(time_to_next_loop / 1000)
 
     def tick(self):
         self.tick_count += 1
@@ -182,6 +182,12 @@ class Manager:
         # NaturalDecay
         agent.health -= self.configuration["Agent_NaturalDecay"]
 
+    def set_frame_information(self):
+        self.frame_information.agents = copy(self.agents)
+        self.frame_information.food_positions = copy(self.food_positions)
+        self.frame_information.tick_count = self.tick_count
+        self.frame_information.has_been_used = False
+
     def fill_to_min_population(self):
         while len(self.agents) < self.configuration["Agent_MinPopulation"]:
             self.add_agent()
@@ -196,24 +202,3 @@ class Manager:
         agent = Agent(position, direction, self.tick_count, self.configuration, parent)
 
         self.agents.append(agent)
-
-
-class TickThread (threading.Thread):
-    def __init__(self, manager, thread_id, name):
-        threading.Thread.__init__(self)
-        self.manager = manager
-        self.thread_id = thread_id
-        self.name = name
-
-    def run(self):
-        print("Starting " + self.name)
-        while not self.manager.exit_tasks:
-            if self.manager.thread_tick_tasks[self.thread_id] is not None:
-                for agent in list(self.manager.thread_tick_tasks[self.thread_id]):
-                    if agent is not None:
-                        self.manager.tick_agent(agent)
-
-                        self.manager.thread_tick_tasks[self.thread_id] = None
-
-            time.sleep(0.0001)  # 0.1ms
-        print("Exiting " + self.name)
