@@ -16,7 +16,7 @@ configuration = {
     "Agent_NaturalDecay": 0.1,
     "Agent_MinPopulation": 8,
     "Agent_Reproduce_At": 250,
-    "Agent_Reproduce_Cost": 100,
+    "Agent_Reproduce_Cost": 110,
     "Food_Value": 50,
     "Food_Diameter": 0.5,
     "Food_PerTick": 0.03,
@@ -27,7 +27,7 @@ configuration = {
     "Sensor_Agent_Middle_Angel": 30,
     "Sensor_Agent_Side_Angel": 30,
     "Neural_Network_Nodes_In_Layers": [9, 6, 6, 3],
-    "Neural_Network_Mutate": 0.1,
+    "Neural_Network_Mutate": 0.33,
 }
 
 

@@ -1,7 +1,6 @@
 import math
-from neuralnet import NeuralNetwork
-
 from copy import deepcopy
+from neuralnet import NeuralNetwork
 
 
 class Agent:
@@ -29,11 +28,11 @@ class Agent:
         self.configuration = configuration
         if parent is None:
             self.neural_network = NeuralNetwork(configuration["Neural_Network_Nodes_In_Layers"])
-            self.neural_network.randomize_weights(-10, 10)
+            self.neural_network.mutate(10)
         else:
             self.neural_network = deepcopy(parent.neural_network)
-            self.mutate()
             self.generation = parent.generation + 1
+            self.mutate()
 
     def eat(self):
         self.health += self.configuration["Food_Value"]
@@ -76,4 +75,4 @@ class Agent:
         self.output = self.neural_network.feed(sensors)
 
     def mutate(self):
-        self.neural_network.mutate_absolute(self.configuration["Neural_Network_Mutate"])
+        self.neural_network.mutate(self.configuration["Neural_Network_Mutate"])
