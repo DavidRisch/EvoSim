@@ -31,7 +31,7 @@ class Agent:
         self.configuration = configuration
         if parent is None:
             self.neural_network = NeuralNetwork(configuration["Neural_Network_Nodes_In_Layers"])
-            self.neural_network.mutate(10)
+            self.neural_network.mutate(1)
         else:
             self.neural_network = deepcopy(parent.neural_network)
             self.generation = parent.generation + 1
