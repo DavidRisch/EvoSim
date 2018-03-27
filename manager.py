@@ -22,6 +22,7 @@ class Manager:
     food_positions = []
     tick_count = 0
     food_to_spawn = 0
+    top_agents = []
     # keeps track of food, that needs to be spawned (because configuration["Food_PerTick"] is not an int)
 
     fps = 20
@@ -29,7 +30,7 @@ class Manager:
     speed = 20  # ticks/second
     speed_before_pause = 0
     # wait_ever_x_ticks = 25  # prevent program from freezing
-    number_of_threads = 8
+    number_of_threads = 1
 
     mark_agents_at_tick = 2000
 
@@ -164,6 +165,7 @@ class Manager:
         agent.health -= self.configuration["Agent_NaturalDecay"]
 
     def tick_agent_part_b(self, agent):
+        agent.age = self.tick_count - agent.birth
         agent.direction += agent.direction_change
         agent.direction = methods.wrap_direction(agent.direction)
         agent.position[0] += agent.position_change_x
@@ -173,6 +175,14 @@ class Manager:
         if agent.health <= 0:
             if agent.last_attacked_by is not None:
                 agent.last_attacked_by.health += self.configuration["Agent_Attack_Gain"]
+
+            # manage top agents
+            if len(self.top_agents) < self.configuration["Agent_MinPopulation"] or agent.age > self.top_agents[0].age:
+                self.top_agents.append(agent)
+                self.top_agents = sorted(self.top_agents, key=lambda x: x.age)
+                if len(self.top_agents) > self.configuration["Agent_MinPopulation"]:
+                    self.top_agents = self.top_agents[1:]
+                print(str(self.top_agents[0].age) + " - " + str(self.top_agents[-1].age))
             self.agents.remove(agent)
         elif agent.health >= self.configuration["Agent_Reproduce_At"]:
             agent.health -= self.configuration["Agent_Reproduce_Cost"]
@@ -209,3 +219,15 @@ class Manager:
         agent = Agent(position, direction, self.tick_count, self.configuration, parent)
 
         self.agents.append(agent)
+
+    def top(self):
+        self.agents = []
+        for i in range(len(self.top_agents)):
+            position = [random.uniform(0, self.configuration["Area"]), random.uniform(0, self.configuration["Area"])]
+            direction = random.uniform(0, 1)
+
+            agent = Agent(position, direction, self.tick_count, self.configuration, None)
+            agent.neural_network = self.top_agents[i].neural_network
+            agent.generation = self.top_agents[i].generation
+
+            self.agents.append(agent)

@@ -13,6 +13,7 @@ class Agent:
     direction_change = None
     health = None
     birth = None
+    age = None
     configuration = {}
     neural_network = None
     sensors = []
@@ -28,6 +29,7 @@ class Agent:
         self.direction = direction
         self.health = configuration["Agent_Health"]
         self.birth = tick_count
+        self.age = 0
         self.configuration = configuration
         if parent is None:
             self.neural_network = NeuralNetwork(configuration["Neural_Network_Nodes_In_Layers"])

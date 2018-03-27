@@ -41,13 +41,17 @@ class Gui:
         self.tkinter_root.button_load.pack()
         self.tkinter_root.button_load.place(x=70, y=5, width=60, height=30)
 
+        self.tkinter_root.button_top = tkinter.Button(self.tkinter_root, text="Spawn top", fg="black")
+        self.tkinter_root.button_top.pack()
+        self.tkinter_root.button_top.place(x=240, y=5, width=100, height=30)
+
         self.tkinter_root.button_jump = tkinter.Button(self.tkinter_root, text="Jump 1 tick [y]", fg="black")
         self.tkinter_root.button_jump.pack()
-        self.tkinter_root.button_jump.place(x=140, y=5, width=100, height=30)
+        self.tkinter_root.button_jump.place(x=135, y=5, width=100, height=30)
 
         self.tkinter_root.speed_slider = Scale(self.tkinter_root, from_=0, to=500, orient=HORIZONTAL)
         self.tkinter_root.speed_slider.pack()
-        self.tkinter_root.speed_slider.place(x=(5+self.area_in_px - 405), y=5, width=400, height=65)
+        self.tkinter_root.speed_slider.place(x=(5+self.area_in_px - 405), y=5, width=400, height=30)
 
         label_y = 5 + 60 + 5 + self.area_in_px + 5
         label_width = (self.area_in_px / 2 - 10)
@@ -77,6 +81,7 @@ class Gui:
         self.tkinter_root.button_save.bind("<Button-1>", self.save)
         self.tkinter_root.button_load.bind("<Button-1>", self.load)
         self.tkinter_root.button_jump.bind("<Button-1>", self.jump)
+        self.tkinter_root.button_top.bind("<Button-1>", self.top)
         self.tkinter_root.bind("y", self.jump)
         self.tkinter_root.speed_slider.bind("<B1-Motion>", self.set_speed)
         self.tkinter_root.speed_slider.bind("<Button-1>", self.set_speed)
@@ -304,6 +309,9 @@ class Gui:
     # noinspection PyUnusedLocal
     def jump(self, event):
         self.manager.tick()
+
+    def top(self, event):
+        self.manager.top()
 
     def quit_window(self):
         self.manager.exit_tasks = True
